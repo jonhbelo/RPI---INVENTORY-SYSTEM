@@ -108,7 +108,8 @@ const esc=x=>String(x??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 const today=()=>new Date().toISOString().slice(0,10);
 const isA=()=>user.role==="admin";
 function toast(t){const d=document.createElement("div");d.className="toast";d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),4200)}
-async function api(a,p){const t0=Date.now();let r;try{const x=await fetch(API,{method:"POST",body:JSON.stringify({a,t:tok,...p})});r=await x.json()}catch(e){online=false;throw new Error("Cannot reach the central database.")}
+async function api(a,p){const t0=Date.now();let r,x;try{x=await fetch(API,{method:"POST",body:JSON.stringify({a,t:tok,...p})})}catch(e){online=false;throw new Error("Cannot reach the backend. Open the Web App URL in your browser: it should say RPI Inventory backend OK. In Apps Script set Who has access to Anyone and use the URL ending in /exec.")}
+const txt=await x.text();try{r=JSON.parse(txt)}catch(e){online=false;throw new Error(/accounts\.google|sign in/i.test(txt)?"The Web App is not public. Redeploy it with Who has access set to Anyone.":"The backend returned an error page. Paste the latest Code.gs, deploy a New version and approve the permissions.")}
 online=true;ms=Date.now()-t0;if(r.error){if(r.error==="auth"){if(user){signOut();toast("Session expired. Please sign in again.")}throw new Error("Please sign in.")}throw new Error(r.error)}return r}
 const objs=rows=>{const h=rows[0]||[];return rows.slice(1).map((r,i)=>{const o={_row:i+2};h.forEach((k,j)=>o[k]=r[j]??"");return o})};
 const grp=rows=>{const m={},out=[];objs(rows).forEach(o=>{if(!o.id)return;let d=m[o.id];if(!d){d={items:[]};for(const k in o)if(k!=="code"&&k!=="qty")d[k]=o[k];m[o.id]=d;out.push(d)}d.items.push({code:o.code,qty:Number(o.qty)||0})});return out};
@@ -137,7 +138,7 @@ if(m==="login")h+=pwf("a_p","Password","current-password");
 if(m==="signup"||m==="reset")h+=pwf("a_p",m==="reset"?"New password":"Password","new-password")+pwf("a_c","Confirm password","new-password");
 h+=`<div class="am${amok?" ok":""}" id="am">${esc(amsg)}</div><button class="add" data-go="${m}">${{login:"Sign in",signup:"Create account",forgot:"Send code",reset:"Reset password",verify:"Verify and create account"}[m]}</button>`;
 h+=m==="login"?'<div class="sw"><button data-md="forgot">Forgot password?</button></div><div class="sw" style="margin-top:6px">New here? <button data-md="signup">Create account</button></div>':(m==="verify"?'<div class="sw"><button data-resend="1">Resend code</button></div>':"")+'<div class="sw"><button data-md="login">← Back to sign in</button></div>';
-return h+"</div></div>"}
+return h+'<div class="sw" style="font-size:12px"><button data-test="1">Test connection</button> · <button data-chapi="1">Change backend URL</button></div></div></div>'}
 function setMsg(t,ok){amsg=t;amok=!!ok;const e=$("am");if(e){e.textContent=t;e.className="am"+(ok?" ok":"")}}
 async function go(m){const pw=$("a_p")?$("a_p").value:"",btn=document.querySelector(".ac .add");if(btn)btn.disabled=true;
 try{if(m==="login"){if(!v("a_i")||!pw)return setMsg("Enter your username or email and password.");await enter(await api("login",{id:v("a_i"),pw}))}
@@ -227,6 +228,8 @@ else if(d.go)go(d.go);
 else if(d.api){const u=v("a_api");if(!/^https:\/\/script\.google(usercontent)?\.com\//.test(u))return setMsg("Enter a valid Apps Script Web App URL.");try{localStorage.setItem("rpi_api",u)}catch(x){}API=u;render()}
 else if(b.id==="av"){menu=!menu;render()}
 else if(d.resend){api("resend",{email:vem}).then(()=>toast("A new code was sent.")).catch(x=>toast(x.message))}
+else if(d.test){fetch(API).then(r=>r.text()).then(t=>t.includes("backend OK")?setMsg("Connection OK. The backend is reachable.",true):setMsg("Reached a page, but it is not the backend. Check the URL and that access is set to Anyone.")).catch(()=>setMsg("Cannot reach that URL. Check the Web App URL and that access is set to Anyone."))}
+else if(d.chapi){try{localStorage.removeItem("rpi_api")}catch(x){}API="PASTE_WEB_APP_URL_HERE";render()}
 else if(d.out)signOut();
 else if(d.t){tab=d.t;menu=false;render()}
 else if(d.e)prodM(d.e);else if(d.add)prodM(null);else if(d.x)closeM();else if(d.s!==undefined)psave(d.s);
