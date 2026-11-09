@@ -101,7 +101,7 @@ const NAV=[["stock","Stock","M5 3h14v18H5zM9 8h6M9 12h6M9 16h3"],["rr","Received
 const HD={rr:["id","no","date","supplier","po","type","code","qty","by","ts"],dr:["id","no","date","client","code","qty","by","ts"],rs:["id","bs","date","client","code","qty","by","ts"],cn:["id","date","project","jo","code","qty","by","ts"]};
 const FLD={rr:[["no","RR no."],["date","Date","date"],["supplier","Supplier"],["po","PO no."],["type","Type","sel"]],dr:[["no","DR no."],["date","Date","date"],["client","Client"]],rs:[["bs","Booking slip / project"],["date","Date","date"],["client","Client"]],cn:[["date","Date","date"],["project","Project / dept"],["jo","JO no."]]};
 const TT={rr:"Received (RR)",dr:"Deliveries (DR)",rs:"Reservations",cn:"Consumables"};
-let tok=null,user=null,S={products:[],rr:[],dr:[],rs:[],cn:[],pending:[],accounts:[]},tab="stock",q="",br="",per="",amode="login",amsg="",amok=false,rid="",ms=0,online=false,menu=false;
+let tok=null,user=null,S={products:[],rr:[],dr:[],rs:[],cn:[],pending:[],accounts:[]},tab="stock",q="",br="",per="",amode="login",amsg="",amok=false,rid="",vem="",ms=0,online=false,menu=false;
 try{tok=localStorage.getItem("rpi_tok")}catch(e){}
 const $=i=>document.getElementById(i),v=i=>{const e=$(i);return e?e.value.trim():""};
 const esc=x=>String(x??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -128,15 +128,15 @@ const prow=(type,docId,action,summary,extra,before,reason,st="pending",dec="")=>
 const pwf=(id,l,ac)=>`<label>${l}</label><div class="pw"><input id="${id}" type="password" autocomplete="${ac}"><button type="button" class="eye" data-eye="${id}">Show</button></div>`;
 function authV(){const m=amode;let h='<div class="auth"><div class="ac"><div class="logo" style="margin-bottom:0"><svg viewBox="0 0 300 70"><use href="#lg"/></svg></div>';
 if(!okApi())return h+'<h2>Connect to Google Sheets</h2><p>Paste the Web App URL of your deployed Google Apps Script (see Code.gs).</p><label>Backend URL</label><input id="a_api" placeholder="https://script.google.com/macros/s/…/exec"><div class="am" id="am"></div><button class="add" data-api="1">Save and continue</button></div></div>';
-const T={login:["Sign in","RPI Inventory System"],signup:["Create account","Use your company email address."],forgot:["Forgot password","We will email a 6-digit code to your account email."],reset:["Reset password","Enter the code we emailed you."]}[m];
+const T={login:["Sign in","RPI Inventory System"],signup:["Create account","Use your company email address."],forgot:["Forgot password","We will email a 6-digit code to your account email."],reset:["Reset password","Enter the code we emailed you."],verify:["Verify your email","Enter the 6-digit code we sent to your email."]}[m];
 h+=`<h2>${T[0]}</h2><p>${T[1]}</p>`;
 if(m==="signup")h+='<label>Full name</label><input id="a_n" autocomplete="name"><label>Username</label><input id="a_u" autocomplete="username" placeholder="e.g. jbelo"><label>Email</label><input id="a_e" type="email" placeholder="name@riteproducts.com.ph" autocomplete="email">';
 if(m==="login"||m==="forgot")h+=`<label>${m==="login"?"Username or email":"Username or email of your account"}</label><input id="a_i" autocomplete="username">`;
-if(m==="reset")h+='<label>6-digit code</label><input id="a_k" inputmode="numeric" maxlength="6">';
+if(m==="reset"||m==="verify")h+='<label>6-digit code</label><input id="a_k" inputmode="numeric" maxlength="6">';
 if(m==="login")h+=pwf("a_p","Password","current-password");
 if(m==="signup"||m==="reset")h+=pwf("a_p",m==="reset"?"New password":"Password","new-password")+pwf("a_c","Confirm password","new-password");
-h+=`<div class="am${amok?" ok":""}" id="am">${esc(amsg)}</div><button class="add" data-go="${m}">${{login:"Sign in",signup:"Create account",forgot:"Send code",reset:"Reset password"}[m]}</button>`;
-h+=m==="login"?'<div class="sw"><button data-md="forgot">Forgot password?</button></div><div class="sw" style="margin-top:6px">New here? <button data-md="signup">Create account</button></div>':'<div class="sw"><button data-md="login">← Back to sign in</button></div>';
+h+=`<div class="am${amok?" ok":""}" id="am">${esc(amsg)}</div><button class="add" data-go="${m}">${{login:"Sign in",signup:"Create account",forgot:"Send code",reset:"Reset password",verify:"Verify and create account"}[m]}</button>`;
+h+=m==="login"?'<div class="sw"><button data-md="forgot">Forgot password?</button></div><div class="sw" style="margin-top:6px">New here? <button data-md="signup">Create account</button></div>':(m==="verify"?'<div class="sw"><button data-resend="1">Resend code</button></div>':"")+'<div class="sw"><button data-md="login">← Back to sign in</button></div>';
 return h+"</div></div>"}
 function setMsg(t,ok){amsg=t;amok=!!ok;const e=$("am");if(e){e.textContent=t;e.className="am"+(ok?" ok":"")}}
 async function go(m){const pw=$("a_p")?$("a_p").value:"",btn=document.querySelector(".ac .add");if(btn)btn.disabled=true;
@@ -144,7 +144,8 @@ try{if(m==="login"){if(!v("a_i")||!pw)return setMsg("Enter your username or emai
 else if(m==="signup"){const n=v("a_n"),u=v("a_u").toLowerCase(),e=v("a_e").toLowerCase();
 if(!n||!u||!e)return setMsg("Fill in your name, username and email.");if(!/^[a-z0-9._]{3,20}$/.test(u))return setMsg("Username: 3-20 letters, numbers, dot or underscore.");
 if(!/^[^@\s]+@riteproducts\.com\.ph$/.test(e))return setMsg("Email must end with @riteproducts.com.ph");if(pw.length<8)return setMsg("Password must be at least 8 characters.");if(pw!==$("a_c").value)return setMsg("Passwords do not match.");
-await enter(await api("signup",{name:n,username:u,email:e,pw}))}
+await api("signup",{name:n,username:u,email:e,pw});vem=e;amode="verify";setMsg("We emailed a 6-digit code to "+e+".",true);render()}
+else if(m==="verify"){if(!/^\d{6}$/.test(v("a_k")))return setMsg("Enter the 6-digit code.");await enter(await api("verify",{email:vem,code:v("a_k")}))}
 else if(m==="forgot"){if(!v("a_i"))return setMsg("Enter your username or email.");await api("forgot",{id:v("a_i")});rid=v("a_i");amode="reset";setMsg("If the account exists, a code was emailed.",true);render()}
 else if(m==="reset"){if(!v("a_k"))return setMsg("Enter the 6-digit code.");if(pw.length<8)return setMsg("Password must be at least 8 characters.");if(pw!==$("a_c").value)return setMsg("Passwords do not match.");
 await api("reset",{id:rid,code:v("a_k"),pw});amode="login";setMsg("Password updated. You can sign in now.",true);render()}}
@@ -225,6 +226,7 @@ else if(d.md){amode=d.md;amsg="";amok=false;render()}
 else if(d.go)go(d.go);
 else if(d.api){const u=v("a_api");if(!/^https:\/\/script\.google(usercontent)?\.com\//.test(u))return setMsg("Enter a valid Apps Script Web App URL.");try{localStorage.setItem("rpi_api",u)}catch(x){}API=u;render()}
 else if(b.id==="av"){menu=!menu;render()}
+else if(d.resend){api("resend",{email:vem}).then(()=>toast("A new code was sent.")).catch(x=>toast(x.message))}
 else if(d.out)signOut();
 else if(d.t){tab=d.t;menu=false;render()}
 else if(d.e)prodM(d.e);else if(d.add)prodM(null);else if(d.x)closeM();else if(d.s!==undefined)psave(d.s);
