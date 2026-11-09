@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RPI Inventory System</title>
+<style>
+:root{--bg:#0d1017;--side:#131823;--card:#161b27;--tx:#f1f3f7;--mut:#8b93a5;--bd:#252b3a;--ac:#6b8cff;--ok:#34d399;--lo:#fbbf24;--neg:#f87171;--wm:.05;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+:root[data-theme="light"]{--bg:#eef0f5;--side:#fff;--card:#fff;--tx:#161a24;--mut:#667085;--bd:#dde1ea;--ac:#3b5bdb;--ok:#059669;--lo:#b45309;--neg:#dc2626;--wm:.07;color-scheme:light}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*{box-sizing:border-box}
+body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;display:flex}
+aside{width:300px;flex:none;background:var(--side);border-right:1px solid var(--bd);display:flex;flex-direction:column;padding:8px;height:100vh;position:sticky;top:0}
+.logo{background:#fff;border-radius:10px;height:77px;display:flex;align-items:center;justify-content:center;gap:8px;color:#1e2a78;margin-bottom:18px}
+.logo b{font-size:19px;letter-spacing:-.5px;display:block;line-height:1}
+.logo small{font-size:7px;font-weight:700;letter-spacing:.5px;display:block;border-top:1px solid #1e2a78;margin-top:2px;padding-top:2px}
+.logo i{width:44px;height:22px;border-radius:50%;background:#2d3a9c;display:block;transform:rotate(-12deg)}
+.nv{display:flex;align-items:center;gap:14px;padding:11px 16px;border-radius:9px;color:var(--tx);cursor:pointer;border:0;background:none;width:100%;font:inherit;font-size:16px;text-align:left;margin-bottom:3px}
+.nv.on{background:var(--bd)}
+.nv svg{width:18px;height:18px;stroke:var(--mut);fill:none;stroke-width:2}
+.nv.on svg{stroke:var(--ac)}
+.foot{margin-top:auto;border-top:1px solid var(--bd);padding-top:14px;font-size:13px}
+.foot .r{display:flex;justify-content:space-between;align-items:center}
+.foot .g{color:var(--ok)}.foot .s{color:var(--mut);font-size:12px;margin-top:6px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--ok);margin-right:6px}
+.main{flex:1;min-width:0;padding:24px 30px;position:relative;
+background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='340' height='150'><text x='10' y='80' transform='rotate(-8 170 75)' font-family='Georgia,serif' font-style='italic' font-weight='700' font-size='22' fill='%23808a9e' fill-opacity='.14'>Rite Products, Incorporated</text></svg>")}
+.top{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.top h1{margin:0;font-size:30px;letter-spacing:-.5px}
+.top p{margin:2px 0 0;color:var(--mut);font-size:14px}
+.sp{flex:1}
+.cdb{display:flex;align-items:center;gap:8px;border:1px solid #1f6b52;background:rgba(16,120,80,.2);color:var(--ok);padding:9px 14px;border-radius:9px;font-size:14px}
+.add{background:var(--ac);color:#fff;border:0;padding:10px 16px;border-radius:9px;font:inherit;cursor:pointer;display:flex;gap:8px;align-items:center}
+.ic{width:38px;height:38px;border:1px solid var(--bd);border-radius:9px;background:var(--card);cursor:pointer;color:var(--lo);font-size:16px}
+.av{width:38px;height:38px;border-radius:50%;background:#5b6cf0;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+.bar{display:flex;gap:12px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:0}
+.bar input,.bar select{background:var(--bg);border:1px solid var(--bd);color:var(--tx);border-radius:9px;padding:12px 14px;font:inherit}
+.bar input{flex:1}.bar select{width:220px}
+.tb{background:var(--card);border:1px solid var(--bd);border-radius:12px;margin-top:-1px;overflow:auto}
+table{width:100%;border-collapse:collapse}
+th{background:rgba(120,130,160,.1);text-align:left;font-size:13px;letter-spacing:.3px;text-transform:uppercase;padding:18px 14px;color:var(--tx);font-weight:700;line-height:1.25}
+td{padding:14px;border-top:1px solid var(--bd);height:68px}
+.r{text-align:right}
+td.c{color:var(--mut)}
+.n{color:var(--mut)}.pi{color:var(--ok)}.po{color:var(--neg)}
+.end{font-weight:700;font-size:17px}
+.al{display:flex;align-items:center;gap:6px;justify-content:center;color:var(--mut)}
+.al input{width:70px;background:var(--bg);border:1px solid var(--bd);color:var(--tx);border-radius:7px;padding:7px 12px;font:inherit}
+.pill{display:inline-block;padding:8px 10px;border-radius:20px;font-size:13px;font-weight:600;max-width:74px;line-height:1.2}
+.p-low{background:rgba(251,191,36,.18);color:var(--lo)}
+.p-out{background:rgba(139,147,165,.18);color:var(--mut)}
+.p-in{background:rgba(52,211,153,.16);color:var(--ok)}
+.p-neg{background:rgba(248,113,113,.18);color:var(--neg)}
+.ed{border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:8px;padding:8px 13px;cursor:pointer;font:inherit}
+.md{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:9}
+.md.on{display:flex}
+.md div{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:20px;width:360px;max-width:92vw}
+.md h3{margin:0 0 12px}
+.md label{display:block;font-size:12px;color:var(--mut);margin:8px 0 3px}
+.md input{width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);border-radius:8px;padding:9px;font:inherit}
+.md .a{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.ph{padding:60px;text-align:center;color:var(--mut)}
+@media(max-width:860px){aside{width:200px}.main{padding:16px}.nv{font-size:14px;padding:9px 10px}}
+textarea{width:100%;min-height:110px;background:var(--bg);border:1px solid var(--bd);color:var(--tx);border-radius:9px;padding:10px;font:13px ui-monospace,monospace}.f{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}.f input,.f select{background:var(--bg);border:1px solid var(--bd);color:var(--tx);border-radius:9px;padding:10px;font:inherit}.pad{padding:16px}.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;margin-bottom:14px}.bn{padding:10px 14px;border-radius:9px;margin-bottom:12px;font-size:14px}.bn.w{background:rgba(251,191,36,.15);color:var(--lo)}.bn.e{background:rgba(248,113,113,.15);color:var(--neg)}.mut{color:var(--mut)}select.rl{background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:9px;padding:8px;font:inherit}.nv{font-size:15px}.na aside{display:none}.auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.ac{width:400px;max-width:100%;background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:24px}.ac h2{margin:18px 0 2px}.ac p{margin:0;color:var(--mut);font-size:14px}.ac label{display:block;font-size:12px;color:var(--mut);margin:12px 0 4px}.ac input{width:100%;background:var(--bg);border:1px solid var(--bd);color:var(--tx);border-radius:9px;padding:11px;font:inherit}.pw{position:relative}.pw input{padding-right:72px}.eye{position:absolute;right:6px;top:5px;border:0;background:none;color:var(--ac);cursor:pointer;font:inherit;padding:6px 8px}.am{min-height:20px;margin:10px 0;font-size:13px;color:var(--neg)}.ac .add{width:100%;justify-content:center}.sw{margin-top:14px;text-align:center;font-size:14px;color:var(--mut)}.sw button{border:0;background:none;color:var(--ac);cursor:pointer;font:inherit}</style></head><body>
+<aside>
+<div class="logo"><i></i><div><b>Rite Products, Incorporated</b><small>ENGINEERING SUPPLIES AND SERVICES</small></div></div>
+<div id="nav"></div>
+<div class="foot"><div class="r"><b>Central Database</b><span id="cs" class="g"></span></div>
+<div class="r s"><span>Google Sheets · Multi-Device</span><span class="g" id="ms"></span></div></div>
+</aside>
+<div class="main" id="main"></div>
+<div class="md" id="md"><div id="mdb"></div></div>
+<script>
+var SID="1l2tvgEsEHUN8--eFF3tT-MncJ2SKct6YZdyHN8cBoLs",SRV="Google Sheets",SURL="https://docs.google.com/spreadsheets/d/"+SID+"/edit";
+var NAV=[["stock","Stock","M5 3h14v18H5zM9 8h6M9 12h6M9 16h3"],["rr","Received (RR)","M12 5v14M5 12h14"],["dr","Deliveries (DR)","M12 3a9 9 0 100 18 9 9 0 000-18zM8 12l3 3 5-6"],["rs","Reservations","M5 3h14v18H5zM9 9h6M9 13h6"],["cn","Consumables","M5 4v16M12 4v16M19 4v16M3 9h4M10 14h4M17 8h4"],["imp","Import data","M12 16V4M7 9l5-5 5 5M4 20h16"],["appr","Approvals","M9 8a3 3 0 100-6 3 3 0 000 6zM3 20c0-4 3-6 6-6M16 11l2 2 4-4"],["usr","Users","M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z"],["cdb","Central Database","M4 6c0-2 16-2 16 0s-16 2-16 0v12c0 2 16 2 16 0V6M4 12c0 2 16 2 16 0"],["set","Settings","M5 4v16M12 4v16M19 4v16M3 9h4M10 14h4M17 8h4"]];
+var HD={rr:["id","no","date","supplier","po","type","code","qty","by","ts"],dr:["id","no","date","client","code","qty","by","ts"],rs:["id","bs","date","client","code","qty","by","ts"],cn:["id","date","project","jo","code","qty","by","ts"]};
+var FLD={rr:[["no","RR no."],["date","Date","date"],["supplier","Supplier"],["po","PO no."],["type","Type","sel"]],dr:[["no","DR no."],["date","Date","date"],["client","Client"]],rs:[["bs","Booking slip / project"],["date","Date","date"],["client","Client"]],cn:[["date","Date","date"],["project","Project / dept"],["jo","JO no."]]};
+var TT={rr:"Received (RR)",dr:"Deliveries (DR)",rs:"Reservations",cn:"Consumables"};
+var S={products:[],rr:[],dr:[],rs:[],cn:[],pending:[],accounts:[]},mcp=null,online=false,loadMs=0,err="",role="viewer",user=null,amode="login",loaded=false,tab="stock",q="",br="",per="";
+function esc(x){return String(x==null?"":x).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function today(){return new Date().toISOString().slice(0,10)}
+function errMsg(e){var c=e&&e.code;return c==="needs_reauth"?"Google Sheets needs to be reconnected in claude.ai.":c==="server_not_connected"?"Connect the Google Sheets connector in claude.ai to use the central database.":c==="approval_required"||c==="not_granted"?"Allow this page to use Google Sheets when claude.ai asks.":c==="not_in_manifest"?"Google Sheets access is not allowed for this page.":"Sheets error: "+(e&&(e.message||e.code)||"unknown")}
+function call(tool,input){return mcp.callTool(SRV,tool,input,{cache:{staleTime:0}}).then(function(r){var p=r&&r.payload;if(typeof p==="string"){try{p=JSON.parse(p)}catch(e){}}return p||{}})}
+function rd(range){return call("get_values",{spreadsheetId:SID,range:range}).then(function(p){return p.values||(p.valueRange&&p.valueRange.values)||[]})}
+function objs(rows){var h=rows[0]||[];return rows.slice(1).map(function(r,i){var o={_row:i+2};h.forEach(function(k,j){o[k]=r[j]==null?"":r[j]});return o})}
+function group(t,rows){var m={},out=[];objs(rows).forEach(function(o){if(!o.id)return;var d=m[o.id];if(!d){d={items:[]};for(var k in o)if(k!=="code"&&k!=="qty")d[k]=o[k];m[o.id]=d;out.push(d)}d.items.push({code:o.code,qty:Number(o.qty)||0})});return out}
+function load(){if(!mcp)return Promise.resolve();var t0=Date.now();
+var R={products:"products!A1:E",rr:"rr!A1:J",dr:"dr!A1:H",rs:"rs!A1:H",cn:"cn!A1:H",pending:"pending!A1:J",accounts:"accounts!A1:G"};
+return Promise.all(Object.keys(R).map(function(k){return rd(R[k]).then(function(rows){return[k,rows]})})).then(function(a){a.forEach(function(x){var k=x[0],rows=x[1];
+S[k]=HD[k]?group(k,rows):objs(rows);if(k==="products")S[k].forEach(function(p){p.opening=Number(p.opening)||0;p.min=p.min===""?"":Number(p.min)})});
+online=true;err="";loadMs=Date.now()-t0}).catch(function(e){online=false;err=errMsg(e)}).then(function(){loaded=true;if(!user)restore();render()})}
+function W(tool,input,local,after){local&&local();render();if(!online)return;call(tool,input).then(function(){return mcp.invalidate().catch(function(){})}).then(load).catch(function(e){err=errMsg(e);render()})}
+function sum(t,c,f){var n=0;S[t].forEach(function(d){if(f&&!f(d))return;d.items.forEach(function(i){if(i.code===c)n+=i.qty})});return n}
+function calc(p){var i=sum("rr",p.code),o=sum("dr",p.code),rv=sum("rs",p.code),c=sum("cn",p.code),e=p.opening+i-o-rv-c,m=p.min===""?10:p.min;
+return{i:i,o:o,rv:rv,c:c,e:e,m:m,s:e<0?["neg","Negative stock"]:e===0?["out","Out of stock"]:e<=m?["low","Low stock (≤ "+m+")"]:["in","In stock"]}}
+function dash(v,c){return v?'<span class="'+c+'">'+v+"</span>":'<span class="n">–</span>'}
+function bn(){return(err?'<div class="bn e">'+esc(err)+" Showing local data only.</div>":"")+(!mcp?'<div class="bn w">Not connected to Google Sheets. Open this page in claude.ai with the Google Sheets connector to use the shared database; changes here stay local.</div>':"")+(role==="viewer"?'<div class="bn w">Viewer role: changes are submitted for admin approval.</div>':"")}
+function head(){var t=tab,n=NAV.filter(function(x){return x[0]===t})[0][1];var sub=t==="stock"?S.products.length+" products in catalog":"";
+return'<div class="top"><div><h1>'+n+"</h1><p>"+sub+'</p></div><div class="sp"></div>'+(t==="stock"&&role!=="viewer"?'<button class="add" data-add="1">＋ Add product</button>':"")+'<span class="mut" style="align-self:center;margin:0 6px">'+esc(user?user.name||user.email:"")+' · '+role+'</span><button class="ed" data-out="1">Sign out</button><button class="ic" id="th" title="Theme">☀</button><div class="av">J</div></div>'+bn()}
+function stockV(){var bs={};S.products.forEach(function(p){bs[p.brand]=1});var bl=Object.keys(bs).sort();
+return'<div class="bar"><input id="q" placeholder="🔍  Search stock: product code or brand..." value="'+esc(q)+'"><select id="br"><option value="">All brands ('+bl.length+")</option>"+bl.map(function(b){return"<option"+(b===br?" selected":"")+">"+esc(b)+"</option>"}).join("")+'</select></div><div class="tb"><table><thead><tr><th>Brand</th><th>Product code</th><th>UM</th><th class="r">Beginning</th><th class="r">Stock<br>in (RR)</th><th class="r">Stock<br>out (DR)</th><th class="r">Ending</th><th style="text-align:center">Low stock<br>alert</th><th>Status</th><th class="r">Action</th></tr></thead><tbody id="rows">'+rows()+"</tbody></table></div>"}
+function rows(){return S.products.filter(function(p){return(!br||p.brand===br)&&(p.code+" "+p.brand).toLowerCase().indexOf(q.toLowerCase())>-1}).map(function(p){var c=calc(p);
+return"<tr><td>"+esc(p.brand)+"</td><td><b>"+esc(p.code)+'</b></td><td class="c">'+esc(p.unit)+'</td><td class="r">'+p.opening+'</td><td class="r">'+dash(c.i,"pi")+'</td><td class="r">'+dash(c.o,"po")+'</td><td class="r end">'+c.e+'</td><td><div class="al">≤ <input type="number" min="0" value="'+c.m+'" data-m="'+esc(p.code)+'"'+(role==="admin"?"":" disabled")+'></div></td><td><span class="pill p-'+c.s[0]+'">'+c.s[1]+'</span></td><td class="r"><button class="ed" data-e="'+esc(p.code)+'">✎ Edit</button></td></tr>'}).join("")}
+function months(t){var m={};S[t].forEach(function(d){m[(d.date||"").slice(0,7)]=1});return Object.keys(m).filter(Boolean).sort().reverse()}
+function txnV(t){var f=FLD[t].map(function(x){return x[2]==="sel"?'<select id="f_'+x[0]+'"><option>Trading</option><option>Other</option></select>':'<input id="f_'+x[0]+'" type="'+(x[2]||"text")+'" placeholder="'+x[1]+'" value="'+(x[2]==="date"?today():"")+'" style="'+(x[2]==="date"?"":"min-width:150px")+'">'}).join("");
+var list=S[t].slice().reverse().map(function(d){return"<tr><td>"+esc(d.no||d.bs||d.jo||"")+"</td><td>"+esc(d.date)+"</td><td>"+esc(d.client||d.supplier||d.project||"")+"</td><td>"+d.items.map(function(i){return esc(i.code)+" × "+i.qty}).join(", ")+'</td><td class="c">'+esc(d.by)+"</td></tr>"}).join("");
+var h='<div class="card pad"><div class="f">'+f+'</div><textarea id="items" placeholder="Items, one per line:  PRODUCT CODE, QTY"></textarea><div class="f" style="margin:10px 0 0"><button class="add" data-save="'+t+'">'+(role==="viewer"?"Submit for approval":"Save "+TT[t])+'</button></div></div><div class="card tb"><table><thead><tr><th>Ref</th><th>Date</th><th>Party</th><th>Items</th><th>By</th></tr></thead><tbody>'+(list||'<tr><td colspan="5" class="mut">No records yet.</td></tr>')+"</tbody></table></div>";
+if(t==="dr"){var ms=months("dr"),agg={};S.dr.filter(function(d){return!per||(d.date||"").slice(0,7)===per}).forEach(function(d){d.items.forEach(function(i){var a=agg[i.code]||(agg[i.code]={q:0,n:{},c:{}});a.q+=i.qty;a.n[d.no]=1;a.c[d.client]=1})});
+var ks=Object.keys(agg).sort(),tot=ks.reduce(function(s,k){return s+agg[k].q},0);
+h+='<div class="card pad"><div class="f"><b style="align-self:center">DR total per item</b><select id="per"><option value="">All time</option>'+ms.map(function(m){return"<option"+(m===per?" selected":"")+">"+m+"</option>"}).join("")+'</select></div><div class="tb" style="border:0"><table><thead><tr><th>Product code</th><th class="r">Total encoded</th><th class="r">% share</th><th class="r"># DRs</th><th>Clients</th></tr></thead><tbody>'+(ks.map(function(k){var a=agg[k];return"<tr><td>"+esc(k)+'</td><td class="r"><b>'+a.q+'</b></td><td class="r">'+(tot?Math.round(a.q/tot*100):0)+'%</td><td class="r">'+Object.keys(a.n).length+"</td><td>"+esc(Object.keys(a.c).join(", "))+"</td></tr>"}).join("")||'<tr><td colspan="5" class="mut">No deliveries.</td></tr>')+'</tbody><tfoot><tr><td><b>Grand total</b></td><td class="r"><b>'+tot+"</b></td><td></td><td></td><td></td></tr></tfoot></table></div></div>"}
+return h}
+function impV(){return'<div class="card pad"><p class="mut" style="margin-top:0">Paste CSV rows: <b>brand, code, unit, opening, low alert</b> (low alert optional). Existing codes are skipped.</p><textarea id="csv" placeholder="BELIMO, D640N+SR230P-5, set, 1, 3"></textarea><div class="f" style="margin:10px 0 0"><button class="add" data-imp="1"'+(role==="viewer"?" disabled":"")+'>Import products</button></div><div id="impr" class="mut" style="margin-top:8px"></div></div>'}
+function apprV(){var l=S.pending.slice().reverse();if(!l.length)return'<div class="card pad mut">No pending changes.</div>';
+return l.map(function(p){var a={};try{a=JSON.parse(p.after||"{}")}catch(e){}var b={};try{b=JSON.parse(p.before||"{}")}catch(e){}var st=p.status||"pending";
+return'<div class="card pad"><b>'+esc(p.type.toUpperCase())+" "+esc(a.action||"")+'</b> <span class="mut">by '+esc(p.by)+" · "+esc(st)+"</span><div>"+(p.reason?'<i>“'+esc(p.reason)+"”</i><br>":"")+esc(a.summary||"")+(b.summary?'<br><span class="mut">Before: '+esc(b.summary)+"</span>":"")+"</div>"+(st==="pending"&&role==="admin"?'<div class="f" style="margin:10px 0 0"><button class="add" data-ok="'+esc(p.id)+'">Approve</button><button class="ed" data-no="'+esc(p.id)+'">Reject</button></div>':"")+"</div>"}).join("")}
+function usrV(){var ok=role==="admin";return(ok?"":'<div class="bn w">Only admins can change roles.</div>')+'<div class="card tb"><table><thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Active</th></tr></thead><tbody>'+(S.accounts.map(function(a){var rl=ok&&a.email!==user.email&&a._row?'<select class="rl" data-ur="'+a._row+'">'+["admin","editor","viewer"].map(function(r){return"<option"+(r===a.role?" selected":"")+">"+r+"</option>"}).join("")+"</select>":esc(a.role);return"<tr><td>"+esc(a.email)+"</td><td>"+esc(a.name)+"</td><td>"+rl+"</td><td>"+esc(a.active)+"</td></tr>"}).join("")||'<tr><td colspan="4" class="mut">No users yet.</td></tr>')+"</tbody></table></div>"}
+function cdbV(){var ts=["products","rr","dr","rs","cn","accounts","pending"];return'<div class="card pad"><p style="margin-top:0">'+(online?'<span class="dot"></span>Connected to Google Sheets · loaded in '+loadMs+" ms":'<span class="mut">Not connected</span>')+'</p><div class="f"><a class="add" style="text-decoration:none" href="'+SURL+'" target="_blank" rel="noopener">Open Google Sheet</a><button class="ed" data-ref="1">↻ Refresh from cloud</button></div></div><div class="card tb"><table><thead><tr><th>Tab</th><th class="r">Records</th></tr></thead><tbody>'+ts.map(function(t){return"<tr><td>"+t+'</td><td class="r">'+S[t].length+"</td></tr>"}).join("")+'</tbody></table></div><p class="mut">Transactions are stored one row per line item. The sheet tab “stock” recalculates balances with formulas.</p>'}
+function setV(){return'<div class="card pad"><div class="f"><button class="ed" id="th2">Toggle light / dark</button></div><p class="mut">Spreadsheet ID: '+SID+"<br>Roles are selectable for demo purposes; real access control must be enforced by Google sharing.</p></div>"}
+function render(){var el=document.getElementById("main");if(!user){document.body.classList.add("na");el.innerHTML=authV();return}document.body.classList.remove("na");document.getElementById("nav").innerHTML=NAV.map(function(n){var c=n[0]==="appr"?S.pending.filter(function(p){return(p.status||"pending")==="pending"}).length:0;return'<button class="nv'+(n[0]===tab?" on":"")+'" data-t="'+n[0]+'"><svg viewBox="0 0 24 24"><path d="'+n[2]+'"/></svg>'+n[1]+(c?" ("+c+")":"")+"</button>"}).join("");
+document.getElementById("cs").innerHTML=online?'<span class="dot"></span>Cloud Synced':'<span class="dot" style="background:var(--lo)"></span>Local only';document.getElementById("ms").textContent=online?loadMs+"ms":"";
+var b=tab==="stock"?stockV():HD[tab]?txnV(tab):tab==="imp"?impV():tab==="appr"?apprV():tab==="usr"?usrV():tab==="cdb"?cdbV():setV();
+el.innerHTML=head()+b}
+function v(i){var e=document.getElementById(i);return e?e.value.trim():""}
+function pend(type,docId,action,summary,after,before,reason){var id="p_"+Date.now(),rec={id:id,type:type,docId:docId,before:JSON.stringify(before||{}),after:JSON.stringify(Object.assign({action:action,summary:summary},after)),reason:reason||"",by:role,ts:Date.now(),status:"pending",decidedBy:""};
+W("append_values",{spreadsheetId:SID,range:"pending!A1",values:[[rec.id,rec.type,rec.docId,rec.before,rec.after,rec.reason,rec.by,rec.ts,"pending",""]]},function(){S.pending.push(rec)})}
+function addTxn(t,head,items,by){var id="doc_"+Date.now()+"_"+Math.random().toString(36).slice(2,6),ts=Date.now();
+var rows=items.map(function(i){return HD[t].map(function(h){return h==="id"?id:h==="code"?i.code:h==="qty"?i.qty:h==="by"?by:h==="ts"?ts:h==="date"||h==="no"?"'"+(head[h]||""):head[h]||""})});
+W("append_values",{spreadsheetId:SID,range:t+"!A1",values:rows},function(){var d={id:id,by:by,items:items};for(var k in head)d[k]=head[k];S[t].push(d)})}
+function addProd(p){W("append_values",{spreadsheetId:SID,range:"products!A1",values:[[p.brand,p.code,p.unit,p.opening,p.min]]},function(){S.products.push(Object.assign({_row:S.products.length+2},p))})}
+function updProd(code,p){var o=S.products.filter(function(x){return x.code===code})[0];if(!o)return;W("update_values",{spreadsheetId:SID,range:"products!A"+o._row+":E"+o._row,values:[[p.brand,p.code,p.unit,p.opening,p.min]]},function(){Object.assign(o,p)})}
+function parseItems(s){var out=[],bad=[];s.split(/\n/).forEach(function(l){l=l.trim();if(!l)return;var m=l.lastIndexOf(",");var c=(m>-1?l.slice(0,m):l).trim(),q=Number(m>-1?l.slice(m+1):1);if(!(q>0)||!S.products.some(function(p){return p.code===c}))bad.push(l);else out.push({code:c,qty:q})});return{ok:out,bad:bad}}
+function modal(code){var p=code==null?{brand:"",code:"",unit:"pcs",opening:0,min:10}:S.products.filter(function(x){return x.code===code})[0];if(!p)return;
+document.getElementById("mdb").innerHTML="<h3>"+(code==null?"Add product":"Edit product")+'</h3><label>Brand</label><input id="f_b" value="'+esc(p.brand)+'"><label>Product code</label><input id="f_c" value="'+esc(p.code)+'"><label>Unit</label><input id="f_u" value="'+esc(p.unit)+'"><label>Beginning balance</label><input id="f_o" type="number" value="'+p.opening+'"><label>Low stock alert</label><input id="f_m" type="number" min="0" value="'+(p.min===""?10:p.min)+'">'+(code!=null&&role!=="admin"?'<label>Reason for edit (required)</label><input id="f_r">':"")+'<div class="a"><button class="ed" data-x="1">Cancel</button><button class="add" data-s="'+(code==null?"":esc(code))+'">Save</button></div>';document.getElementById("md").classList.add("on")}
+function cleanMail(x){return String(x||"").replace(/[\u200B-\u200D\uFEFF\u00A0]/g,"").trim().toLowerCase()}
+function b64(buf){var t="";new Uint8Array(buf).forEach(function(x){t+=String.fromCharCode(x)});return btoa(t)}
+function newSalt(){return b64(crypto.getRandomValues(new Uint8Array(16)))}
+function hashPw(pw,sb){var salt=Uint8Array.from(atob(sb),function(c){return c.charCodeAt(0)});return crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveBits"]).then(function(k){return crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:salt,iterations:120000},k,256)}).then(b64)}
+function setMsg(t){var e=document.getElementById("am");if(e)e.textContent=t||""}
+function pwf(id,label,ac){return"<label>"+label+'</label><div class="pw"><input id="'+id+'" type="password" autocomplete="'+ac+'"><button type="button" class="eye" data-eye="'+id+'">Show</button></div>'}
+function authV(){var su=amode==="signup",wait=mcp&&!loaded;
+return'<div class="auth"><div class="ac"><div class="logo" style="margin-bottom:0"><i></i><div><b>Rite Products, Incorporated</b><small>ENGINEERING SUPPLIES AND SERVICES</small></div></div><h2>'+(su?"Create account":"Sign in")+"</h2><p>"+(su?"Use your company email address.":"RPI Inventory System")+"</p>"+(su?'<label>Full name</label><input id="a_n" autocomplete="name">':"")+'<label>Email</label><input id="a_e" type="email" placeholder="name@riteproducts.com.ph" autocomplete="username">'+pwf("a_p","Password",su?"new-password":"current-password")+(su?pwf("a_c","Confirm password","new-password"):"")+'<div class="am" id="am">'+(wait?"Connecting to the central database…":"")+(!mcp?"Not connected to Google Sheets: accounts stay local to this page.":"")+'</div><button class="add" data-'+(su?"signup":"login")+'="1">'+(su?"Create account":"Sign in")+'</button><div class="sw">'+(su?"Already have an account? ":"New here? ")+'<button data-sw="1">'+(su?"Sign in":"Create account")+"</button></div></div></div>"}
+function signIn(a){user=a;role=a.role;try{sessionStorage.setItem("rpi_user",a.email)}catch(e){}tab="stock";render()}
+function restore(){try{var e=sessionStorage.getItem("rpi_user");if(!e)return;var a=S.accounts.filter(function(x){return x.email===e})[0];if(a){user=a;role=a.role}}catch(x){}}
+function ready(){if(mcp&&!loaded){setMsg("Still connecting, try again in a moment.");return false}if(mcp&&!online){setMsg("Cannot reach the central database. "+err);return false}return true}
+function doLogin(){var em=cleanMail(v("a_e")),pw=document.getElementById("a_p").value;if(!em||!pw){setMsg("Enter your email and password.");return}if(!ready())return;
+var a=S.accounts.filter(function(x){return x.email===em})[0];if(!a||!a.hash||!a.salt){setMsg("Incorrect email or password.");return}
+if(String(a.active).toUpperCase()==="FALSE"){setMsg("This account is disabled.");return}
+hashPw(pw,a.salt).then(function(h){if(h!==a.hash)setMsg("Incorrect email or password.");else signIn(a)})}
+function doSignup(){var nm=v("a_n"),em=cleanMail(v("a_e")),pw=document.getElementById("a_p").value,pc=document.getElementById("a_c").value;
+if(!nm){setMsg("Enter your full name.");return}if(!/^[^@\s]+@riteproducts\.com\.ph$/.test(em)){setMsg("Email must end with @riteproducts.com.ph");return}
+if(pw.length<8){setMsg("Password must be at least 8 characters.");return}if(pw!==pc){setMsg("Passwords do not match.");return}if(!ready())return;
+if(S.accounts.some(function(x){return x.email===em})){setMsg("An account with this email already exists.");return}
+var salt=newSalt();hashPw(pw,salt).then(function(h){var rec={email:em,name:nm,role:S.accounts.length?"viewer":"admin",active:"TRUE",created:today(),salt:salt,hash:h};
+W("append_values",{spreadsheetId:SID,range:"accounts!A1",values:[[rec.email,rec.name,rec.role,rec.active,"'"+rec.created,rec.salt,rec.hash]]},function(){S.accounts.push(rec)});signIn(rec)})}
+document.addEventListener("keydown",function(e){if(e.key==="Enter"&&e.target.closest&&e.target.closest(".ac")){var b=document.querySelector(".ac .add");if(b)b.click()}});
+document.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var d=b.dataset;
+if(d.eye){var f=document.getElementById(d.eye),sh=f.type==="password";f.type=sh?"text":"password";b.textContent=sh?"Hide":"Show"}else if(d.sw){amode=amode==="login"?"signup":"login";render()}else if(d.login)doLogin();else if(d.signup)doSignup();else if(d.out){user=null;role="viewer";amode="login";try{sessionStorage.removeItem("rpi_user")}catch(e){}render()}else if(d.t){tab=d.t;render()}else if(d.e)modal(d.e);else if(d.add)modal(null);else if(d.x)document.getElementById("md").classList.remove("on");
+else if(d.s!==undefined){var p={brand:v("f_b").toUpperCase(),code:v("f_c"),unit:v("f_u")||"pcs",opening:Number(v("f_o"))||0,min:v("f_m")===""?"":Number(v("f_m"))};
+if(!p.brand||!p.code){alert("Brand and product code are required.");return}
+var edit=d.s!=="";if(!edit&&S.products.some(function(x){return x.code===p.code})){alert("That product code already exists.");return}
+if(edit&&role!=="admin"&&!v("f_r")){alert("A reason for the edit is required.");return}
+document.getElementById("md").classList.remove("on");var sm=p.brand+" "+p.code+" · "+p.unit+" · begin "+p.opening+" · alert "+p.min;
+if(edit){if(role==="admin")updProd(d.s,p);else{var o=S.products.filter(function(x){return x.code===d.s})[0];pend("stock",d.s,"edit",sm,{p:p},{summary:o.brand+" "+o.code+" · "+o.unit+" · begin "+o.opening+" · alert "+o.min},v("f_r"))}}
+else if(role==="viewer")pend("stock",p.code,"add",sm,{p:p});else addProd(p)}
+else if(d.save){var t=d.save,h={};FLD[t].forEach(function(x){h[x[0]]=v("f_"+x[0])});var it=parseItems(document.getElementById("items").value);
+if(!it.ok.length||it.bad.length){alert(it.bad.length?"Unknown code or bad quantity:\n"+it.bad.join("\n"):"Add at least one item.");return}
+if(role==="viewer")pend(t,"","add",(h.no||h.bs||h.jo||"")+": "+it.ok.map(function(i){return i.code+" × "+i.qty}).join(", "),{h:h,items:it.ok});else addTxn(t,h,it.ok,role)}
+else if(d.imp){var n=0,rows=[];document.getElementById("csv").value.split(/\n/).forEach(function(l){var c=l.split(",").map(function(x){return x.trim()});if(c.length<2||!c[1]||c[0].toLowerCase()==="brand")return;if(S.products.some(function(p){return p.code===c[1]})||rows.some(function(r){return r.code===c[1]}))return;rows.push({brand:c[0].toUpperCase(),code:c[1],unit:c[2]||"pcs",opening:Number(c[3])||0,min:c[4]===undefined||c[4]===""?"":Number(c[4])})});
+if(!rows.length){document.getElementById("impr").textContent="Nothing to import.";return}
+W("append_values",{spreadsheetId:SID,range:"products!A1",values:rows.map(function(p){return[p.brand,p.code,p.unit,p.opening,p.min]})},function(){rows.forEach(function(p,i){S.products.push(Object.assign({_row:S.products.length+2},p))})});tab="stock";render()}
+else if(d.ok||d.no){var id=d.ok||d.no,p=S.pending.filter(function(x){return x.id===id})[0],a={};try{a=JSON.parse(p.after)}catch(e){}
+p.status=d.ok?"approved":"rejected";p.decidedBy=role;
+if(d.ok){if(a.items)addTxn(p.type,a.h||{},a.items,p.by);else if(a.p){if(a.action==="add")addProd(a.p);else updProd(p.docId,a.p)}}
+W("update_values",{spreadsheetId:SID,range:"pending!I"+p._row+":J"+p._row,values:[[p.status,role]]})}
+else if(d.ref){mcp&&mcp.invalidate().catch(function(){}).then(load)}
+else if(b.id==="th"||b.id==="th2"){var r=document.documentElement;r.dataset.theme=r.dataset.theme==="light"?"dark":"light"}});
+document.addEventListener("input",function(e){var t=e.target;if(t.id==="q"){q=t.value;document.getElementById("rows").innerHTML=rows()}});
+document.addEventListener("change",function(e){var t=e.target;if(t.id==="br"){br=t.value;document.getElementById("rows").innerHTML=rows()}
+else if(t.dataset.ur){var ac=S.accounts.filter(function(x){return String(x._row)===t.dataset.ur})[0];if(ac)W("update_values",{spreadsheetId:SID,range:"accounts!C"+ac._row,values:[[t.value]]},function(){ac.role=t.value})}else if(t.id==="per"){per=t.value;render()}
+else if(t.dataset.m){var o=S.products.filter(function(x){return x.code===t.dataset.m})[0];if(o)updProd(o.code,Object.assign({},o,{min:Number(t.value)||0}))}});
+render();
+(window.claude?window.claude.use("mcp"):Promise.resolve(null)).then(function(m){mcp=m;if(mcp)load();else render()}).catch(function(){render()});
+</script></body></html>
