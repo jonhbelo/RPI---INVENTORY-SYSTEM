@@ -95,7 +95,8 @@ textarea{width:100%;min-height:110px;background:var(--bg);border:1px solid var(-
 <script>
 const SURL="https://docs.google.com/spreadsheets/d/1l2tvgEsEHUN8--eFF3tT-MncJ2SKct6YZdyHN8cBoLs/edit";
 let API="";try{API=localStorage.getItem("rpi_api")||""}catch(e){}
-if(!API)API="PASTE_WEB_APP_URL_HERE";
+const fixU=u=>u.trim().replace(/\/a\/macros\/[^\/]+\//,"/macros/");
+if(!API)API="PASTE_WEB_APP_URL_HERE";API=fixU(API);
 const okApi=()=>/^https:\/\/script\.google(usercontent)?\.com\//.test(API);
 const NAV=[["stock","Stock","M5 3h14v18H5zM9 8h6M9 12h6M9 16h3"],["rr","Received (RR)","M12 5v14M5 12h14"],["dr","Deliveries (DR)","M12 3a9 9 0 100 18 9 9 0 000-18zM8 12l3 3 5-6"],["rs","Reservations","M5 3h14v18H5zM9 9h6M9 13h6"],["cn","Consumables","M5 4v16M12 4v16M19 4v16M3 9h4M10 14h4M17 8h4"],["imp","Import data","M12 16V4M7 9l5-5 5 5M4 20h16"],["appr","Approvals","M9 8a3 3 0 100-6 3 3 0 000 6zM3 20c0-4 3-6 6-6M16 11l2 2 4-4"],["usr","Users","M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z"],["cdb","Central Database","M4 6c0-2 16-2 16 0s-16 2-16 0v12c0 2 16 2 16 0V6M4 12c0 2 16 2 16 0"],["set","Settings","M12 15a3 3 0 100-6 3 3 0 000 6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4"]];
 const HD={rr:["id","no","date","supplier","po","type","code","qty","by","ts"],dr:["id","no","date","client","code","qty","by","ts"],rs:["id","bs","date","client","code","qty","by","ts"],cn:["id","date","project","jo","code","qty","by","ts"]};
@@ -225,7 +226,7 @@ const b=e.target.closest("button");if(!b)return;const d=b.dataset;
 if(d.eye){const f=$(d.eye),sh=f.type==="password";f.type=sh?"text":"password";b.textContent=sh?"Hide":"Show"}
 else if(d.md){amode=d.md;amsg="";amok=false;render()}
 else if(d.go)go(d.go);
-else if(d.api){const u=v("a_api");if(!/^https:\/\/script\.google(usercontent)?\.com\//.test(u))return setMsg("Enter a valid Apps Script Web App URL.");try{localStorage.setItem("rpi_api",u)}catch(x){}API=u;render()}
+else if(d.api){const u=fixU(v("a_api"));if(!/^https:\/\/script\.google(usercontent)?\.com\//.test(u))return setMsg("Enter a valid Apps Script Web App URL.");try{localStorage.setItem("rpi_api",u)}catch(x){}API=u;render()}
 else if(b.id==="av"){menu=!menu;render()}
 else if(d.resend){api("resend",{email:vem}).then(()=>toast("A new code was sent.")).catch(x=>toast(x.message))}
 else if(d.test){fetch(API).then(r=>r.text()).then(t=>t.includes("backend OK")?setMsg("Connection OK. The backend is reachable.",true):setMsg("Reached a page, but it is not the backend. Check the URL and that access is set to Anyone.")).catch(()=>setMsg("Cannot reach that URL. Check the Web App URL and that access is set to Anyone."))}
