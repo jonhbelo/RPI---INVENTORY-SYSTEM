@@ -94,7 +94,7 @@ textarea{width:100%;min-height:110px;background:var(--bg);border:1px solid var(-
 <datalist id="pl"></datalist>
 <script>
 const SURL="https://docs.google.com/spreadsheets/d/1l2tvgEsEHUN8--eFF3tT-MncJ2SKct6YZdyHN8cBoLs/edit";
-let API="";try{API=localStorage.getItem("rpi_api")||""}catch(e){}
+const DEF="https://script.google.com/macros/s/AKfycbyryZBuuIkNRh09LG2OqadeKK-OB8wdwbYcCd7Tj0CD01z9WtjobQkIC1NC0fdb5PYXQQ/exec";let API=DEF;if(!DEF)try{API=localStorage.getItem("rpi_api")||""}catch(e){}
 const fixU=u=>u.trim().replace(/\/a\/macros\/[^\/]+\//,"/macros/");
 if(!API)API="PASTE_WEB_APP_URL_HERE";API=fixU(API);
 const okApi=()=>/^https:\/\/script\.google(usercontent)?\.com\//.test(API);
