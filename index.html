@@ -179,7 +179,7 @@ function signOut(){if(tok)api("out").catch(()=>{});tok=null;user=null;menu=false
 /* ---------- views ---------- */
 function bn(){return(!online?'<div class="bn e">Cannot reach the central database. Showing the last loaded data.</div>':"")+(user.role==="viewer"?'<div class="bn w">Viewer role: additions, edits and deletions are sent to an admin for approval.</div>':"")+(user.role==="editor"?'<div class="bn w">Editor role: edits and deletions need admin approval.</div>':"")}
 function head(){const n=NAV.find(x=>x[0]===tab)[1],ini=(user.name||user.username||"?").trim()[0].toUpperCase();
-return`<div class="top"><div><h1>${n}</h1><p>${tab==="stock"?S.products.length+" products in catalog":""}</p></div><div class="sp"></div>${tab==="stock"?'<div class="cdb"><span class="dot"></span>Central Cloud DB</div><button class="add" data-add="1">＋ Add product</button>':""}<button class="ic" id="th" title="Theme">☀</button><div class="menuw" style="position:relative"><button class="av" id="av" title="Account">${esc(ini)}</button>${menu?`<div class="menu"><div><b>${esc(user.name)}</b><br>@${esc(user.username)} · ${user.role}</div><button data-t="set">⚙ Settings</button><button data-out="1">⏻ Sign out</button></div>`:""}</div></div>`+bn()}
+return`<div class="top"><div><h1>${n}</h1><p>${tab==="stock"?S.products.length+" products in catalog":""}</p></div><div class="sp"></div>${tab==="stock"?'<div class="cdb"><span class="dot"></span>Central Cloud DB</div><button class="ed" data-dlst="1" title="Downloads the rows currently shown (respects search and brand filter)">⬇ Download stocks</button><button class="add" data-add="1">＋ Add product</button>':""}<button class="ic" id="th" title="Theme">☀</button><div class="menuw" style="position:relative"><button class="av" id="av" title="Account">${esc(ini)}</button>${menu?`<div class="menu"><div><b>${esc(user.name)}</b><br>@${esc(user.username)} · ${user.role}</div><button data-t="set">⚙ Settings</button><button data-out="1">⏻ Sign out</button></div>`:""}</div></div>`+bn()}
 function stockV(){const bs=[...new Set(S.products.map(p=>p.brand))].sort();
 return`<div class="bar"><input id="q" placeholder="🔍  Search stock: product code or brand..." value="${esc(q)}"><select id="br"><option value="">All brands (${bs.length})</option>${bs.map(b=>`<option${b===br?" selected":""}>${esc(b)}</option>`).join("")}</select></div><div class="tb st"><table><thead><tr><th>Brand</th><th>Product code</th><th>UM</th><th class="r">Beginning</th><th class="r">Stock<br>in (RR)</th><th class="r">Stock<br>out (DR)</th><th class="r">Reserved<br>(RS)</th><th class="r">Consumed<br>(CN)</th><th class="r">Assembled /<br>Disassembled</th><th class="r">Ending</th><th style="text-align:center">Low stock<br>alert</th><th>Status</th><th class="r">Action</th></tr></thead><tbody id="rows">${rows()}</tbody></table></div>`}
 function rows(){return S.products.filter(p=>(!br||p.brand===br)&&(p.code+" "+p.brand).toLowerCase().includes(q.toLowerCase())).map(p=>{const c=calc(p);
@@ -258,6 +258,13 @@ const key=hk.map(x=>h[x]).join("|");let d=docs.get(key);if(!d){d={h,items:[]};do
 if(!docs.size){r.textContent="Nothing to import."+note();return}
 const out=[];docs.forEach(d=>{const id="doc_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);txRows(k,d.h,d.items,id,user.username).forEach(x=>out.push(x))});
 r.textContent="Importing "+docs.size+" records…";await api("add",{s:k,rows:out});impMsg=docs.size+" "+m.n+" records ("+items+" items) imported."+note();await load()}catch(e){r.textContent=e.message}}
+function dlStocks(){const list=S.products.filter(p=>(!br||p.brand===br)&&(p.code+" "+p.brand).toLowerCase().includes(q.toLowerCase()));
+if(!list.length)return toast("No stocks to download.");
+const hdr=["Brand","Product Code","UM","Beginning","RR In","DR Out","Reserved (RS)","Consumed (CN)","Assembled / Disassembled","Ending","Low Stock Alert","Status"];
+const cs=x=>{x=String(x??"");return /[",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x};
+const rows=list.map(p=>{const c=calc(p);return[p.brand,p.code,p.unit,p.opening,c.i,c.o,c.rv,c.c,c.ad,c.e,c.m,c.s[1].replace(/ \(.*\)$/,"")]});
+const csv=[hdr,...rows].map(r=>r.map(cs).join(",")).join("\r\n")+"\r\n";
+const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\uFEFF"+csv],{type:"text/csv"}));a.download="RPI-stocks-"+today()+".csv";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast("Downloaded "+list.length+" products.")}
 function dlTpl(k){const m=IMP[k],csv=[m.h,...m.ex].map(r=>r.map(x=>/[",\n]/.test(String(x))?'"'+String(x).replace(/"/g,'""')+'"':x).join(",")).join("\r\n")+"\r\n";const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\uFEFF"+csv],{type:"text/csv"}));a.download=m.f;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 async function prof(){try{const r=await api("profile",{name:v("s_n"),username:v("s_u").toLowerCase()});user=r.me;render();toast("Profile updated.")}catch(e){toast(e.message)}}
 async function pwc(){const n=$("s_p").value;if(n.length<8)return toast("New password must be at least 8 characters.");if(n!==$("s_c").value)return toast("Passwords do not match.");
@@ -317,7 +324,7 @@ else if(d.addln){const c=$(b.closest(".md")?"mlines":"lines");c.insertAdjacentHT
 else if(d.rm){const l=b.closest(".ln");if(l.parentNode.children.length>1)l.remove();else l.querySelectorAll("input").forEach(i=>i.value="")}
 else if(d.etx)etxM(...d.etx.split("|"));else if(d.dtx)dtxM(...d.dtx.split("|"));
 else if(d.esave)esave(...d.esave.split("|"));else if(d.dsave)dsave(...d.dsave.split("|"));else if(d.adsave)adsave();else if(d.dad)dadM(d.dad);else if(d.dadsave)dadsave(d.dadsave);
-else if(d.imt){impT=d.imt;impMsg="";render()}else if(d.tpl)dlTpl(d.tpl);else if(d.imp)importCsv(d.imp);else if(d.ok)decide(d.ok,true);else if(d.no)decide(d.no,false);
+else if(d.imt){impT=d.imt;impMsg="";render()}else if(d.dlst)dlStocks();else if(d.tpl)dlTpl(d.tpl);else if(d.imp)importCsv(d.imp);else if(d.ok)decide(d.ok,true);else if(d.no)decide(d.no,false);
 else if(d.prof)prof();else if(d.pw)pwc();
 else if(d.ref)load(true).then(()=>toast("Refreshed from the database.")).catch(x=>toast(x.message));
 else if(b.id==="th"||b.id==="th2"){const r=document.documentElement;r.dataset.theme=r.dataset.theme==="light"?"dark":"light"}});
