@@ -80,6 +80,12 @@ textarea{width:100%;min-height:110px;background:var(--bg);border:1px solid var(-
 .toast{position:fixed;bottom:20px;right:20px;background:var(--card);border:1px solid var(--bd);padding:12px 16px;border-radius:10px;z-index:99;max-width:340px}
 .am.ok{color:var(--ok)}.sf{max-width:440px}.sf h3{margin:0 0 4px}
 .md>div{max-height:92vh;overflow:auto}
+html,body{height:100%}.main{height:100vh;overflow-y:auto}
+.top{position:sticky;top:0;z-index:8;margin:-24px -30px 12px;padding:18px 30px 12px;background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(8px)}
+.tb{max-height:62vh;overflow:auto}.tb.st{max-height:calc(100vh - 250px)}
+.card,.tb,.bar{background:color-mix(in srgb,var(--card) 82%,transparent)!important}
+.tb th{position:sticky;top:0;z-index:3;background:var(--card)!important}
+.wm{opacity:.24!important}:root:not([data-theme=light]) .wm{opacity:.2!important}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="lg" viewBox="0 0 300 70"><ellipse cx="34" cy="37" rx="30" ry="15" fill="#2d3a9c" transform="rotate(-13 34 37)"/><path d="M11 41Q32 26 58 31" stroke="#fff" stroke-width="3" fill="none" opacity=".75"/><text x="72" y="34" font-family="'Franklin Gothic Medium','Arial Narrow',Arial,sans-serif" font-weight="700" font-size="29" fill="#1e2a78" textLength="224" lengthAdjust="spacingAndGlyphs">Rite Products, Incorporated</text><path d="M72 40.5H296" stroke="#1e2a78" stroke-width="1.3"/><text x="72" y="55" font-family="Arial,sans-serif" font-weight="700" font-size="9.5" fill="#1a1d2e" textLength="224" lengthAdjust="spacing">ENGINEERING SUPPLIES AND SERVICES</text></symbol></svg>
 <div class="bg" id="bg"></div>
@@ -114,12 +120,13 @@ const txt=await x.text();try{r=JSON.parse(txt)}catch(e){online=false;throw new E
 online=true;ms=Date.now()-t0;if(r.error){if(r.error==="auth"){if(user){signOut();toast("Session expired. Please sign in again.")}throw new Error("Please sign in.")}throw new Error(r.error)}return r}
 const objs=rows=>{const h=rows[0]||[];return rows.slice(1).map((r,i)=>{const o={_row:i+2};h.forEach((k,j)=>o[k]=r[j]??"");return o})};
 const grp=rows=>{const m={},out=[];objs(rows).forEach(o=>{if(!o.id)return;let d=m[o.id];if(!d){d={items:[]};for(const k in o)if(k!=="code"&&k!=="qty")d[k]=o[k];m[o.id]=d;out.push(d)}d.items.push({code:o.code,qty:Number(o.qty)||0})});return out};
-async function load(){const r=await api("data");user=r.me;S.accounts=objs(r.accounts);S.pending=objs(r.pending);for(const t of["rr","dr","rs","cn"])S[t]=grp(r[t]);
-S.products=objs(r.products).map(p=>({...p,opening:Number(p.opening)||0,min:p.min===""?"":Number(p.min)}));
+function applyData(r){user=r.me;S.accounts=objs(r.accounts);S.pending=objs(r.pending);for(const t of["rr","dr","rs","cn"])S[t]=grp(r[t]);
+S.products=objs(r.products).map(p=>({...p,opening:Number(p.opening)||0,min:p.min===""?0:Number(p.min)||0}));
 $("pl").innerHTML=S.products.map(p=>`<option value="${esc(p.code)}">${esc(p.brand)}</option>`).join("");render()}
+async function load(fresh){applyData(await api("data",fresh?{fresh:1}:{}))}
 const sum=(t,c)=>S[t].reduce((n,d)=>n+d.items.filter(i=>i.code===c).reduce((a,i)=>a+i.qty,0),0);
-function calc(p){const i=sum("rr",p.code),o=sum("dr",p.code),rv=sum("rs",p.code),c=sum("cn",p.code),e=p.opening+i-o-rv-c,m=p.min===""?10:p.min;
-return{i,o,e,m,s:e<0?["neg","Negative stock"]:e===0?["out","Out of stock"]:e<=m?["low","Low stock (≤ "+m+")"]:["in","In stock"]}}
+function calc(p){const i=sum("rr",p.code),o=sum("dr",p.code),rv=sum("rs",p.code),c=sum("cn",p.code),e=p.opening+i-o-rv-c,m=p.min===""?0:p.min;
+return{i,o,rv,c,e,m,s:e<0?["neg","Negative stock"]:e===0?["out","Out of stock"]:e<=m?["low","Low stock (≤ "+m+")"]:["in","In stock"]}}
 const dash=(x,c)=>x?`<span class="${c}">${x}</span>`:'<span class="n">–</span>';
 const sorted=t=>S[t].slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(Number(b.ts)||0)-(Number(a.ts)||0));
 const ref=d=>d.no||d.bs||d.jo||"";
@@ -152,7 +159,7 @@ else if(m==="forgot"){if(!v("a_i"))return setMsg("Enter your username or email."
 else if(m==="reset"){if(!v("a_k"))return setMsg("Enter the 6-digit code.");if(pw.length<8)return setMsg("Password must be at least 8 characters.");if(pw!==$("a_c").value)return setMsg("Passwords do not match.");
 await api("reset",{id:rid,code:v("a_k"),pw});amode="login";setMsg("Password updated. You can sign in now.",true);render()}}
 catch(e){setMsg(e.message)}finally{if(btn)btn.disabled=false}}
-async function enter(r){tok=r.token;try{localStorage.setItem("rpi_tok",tok)}catch(e){}user=r.me;amsg="";menu=false;tab="stock";await load();intro()}
+async function enter(r){tok=r.token;try{localStorage.setItem("rpi_tok",tok)}catch(e){}user=r.me;amsg="";menu=false;tab="stock";if(r.data)applyData(r.data);else await load();intro()}
 function intro(){const o=document.createElement("div");o.className="intro";o.innerHTML='<div class="lc"><svg viewBox="0 0 300 70"><use href="#lg"/></svg></div>';document.body.appendChild(o);setTimeout(()=>o.remove(),2800)}
 function signOut(){if(tok)api("out").catch(()=>{});tok=null;user=null;menu=false;amode="login";amsg="";try{localStorage.removeItem("rpi_tok")}catch(e){}render()}
 /* ---------- views ---------- */
@@ -160,9 +167,9 @@ function bn(){return(!online?'<div class="bn e">Cannot reach the central databas
 function head(){const n=NAV.find(x=>x[0]===tab)[1],ini=(user.name||user.username||"?").trim()[0].toUpperCase();
 return`<div class="top"><div><h1>${n}</h1><p>${tab==="stock"?S.products.length+" products in catalog":""}</p></div><div class="sp"></div>${tab==="stock"?'<div class="cdb"><span class="dot"></span>Central Cloud DB</div><button class="add" data-add="1">＋ Add product</button>':""}<button class="ic" id="th" title="Theme">☀</button><div class="menuw" style="position:relative"><button class="av" id="av" title="Account">${esc(ini)}</button>${menu?`<div class="menu"><div><b>${esc(user.name)}</b><br>@${esc(user.username)} · ${user.role}</div><button data-t="set">⚙ Settings</button><button data-out="1">⏻ Sign out</button></div>`:""}</div></div>`+bn()}
 function stockV(){const bs=[...new Set(S.products.map(p=>p.brand))].sort();
-return`<div class="bar"><input id="q" placeholder="🔍  Search stock: product code or brand..." value="${esc(q)}"><select id="br"><option value="">All brands (${bs.length})</option>${bs.map(b=>`<option${b===br?" selected":""}>${esc(b)}</option>`).join("")}</select></div><div class="tb"><table><thead><tr><th>Brand</th><th>Product code</th><th>UM</th><th class="r">Beginning</th><th class="r">Stock<br>in (RR)</th><th class="r">Stock<br>out (DR)</th><th class="r">Ending</th><th style="text-align:center">Low stock<br>alert</th><th>Status</th><th class="r">Action</th></tr></thead><tbody id="rows">${rows()}</tbody></table></div>`}
+return`<div class="bar"><input id="q" placeholder="🔍  Search stock: product code or brand..." value="${esc(q)}"><select id="br"><option value="">All brands (${bs.length})</option>${bs.map(b=>`<option${b===br?" selected":""}>${esc(b)}</option>`).join("")}</select></div><div class="tb st"><table><thead><tr><th>Brand</th><th>Product code</th><th>UM</th><th class="r">Beginning</th><th class="r">Stock<br>in (RR)</th><th class="r">Stock<br>out (DR)</th><th class="r">Reserved<br>(RS)</th><th class="r">Consumed<br>(CN)</th><th class="r">Ending</th><th style="text-align:center">Low stock<br>alert</th><th>Status</th><th class="r">Action</th></tr></thead><tbody id="rows">${rows()}</tbody></table></div>`}
 function rows(){return S.products.filter(p=>(!br||p.brand===br)&&(p.code+" "+p.brand).toLowerCase().includes(q.toLowerCase())).map(p=>{const c=calc(p);
-return`<tr><td>${esc(p.brand)}</td><td><b>${esc(p.code)}</b></td><td class="c">${esc(p.unit)}</td><td class="r">${p.opening}</td><td class="r">${dash(c.i,"pi")}</td><td class="r">${dash(c.o,"po")}</td><td class="r end">${c.e}</td><td><div class="al">≤ <input type="number" min="0" value="${c.m}" data-mn="${esc(p.code)}"${isA()?"":" disabled"}></div></td><td><span class="pill p-${c.s[0]}">${c.s[1]}</span></td><td class="r"><button class="ed" data-e="${esc(p.code)}">✎ Edit</button></td></tr>`}).join("")}
+return`<tr><td>${esc(p.brand)}</td><td><b>${esc(p.code)}</b></td><td class="c">${esc(p.unit)}</td><td class="r">${p.opening}</td><td class="r">${dash(c.i,"pi")}</td><td class="r">${dash(c.o,"po")}</td><td class="r">${dash(c.rv,"po")}</td><td class="r">${dash(c.c,"po")}</td><td class="r end">${c.e}</td><td><div class="al">≤ <input type="number" min="0" value="${c.m}" data-mn="${esc(p.code)}"${isA()?"":" disabled"}></div></td><td><span class="pill p-${c.s[0]}">${c.s[1]}</span></td><td class="r"><button class="ed" data-e="${esc(p.code)}">✎ Edit</button></td></tr>`}).join("")}
 const lineH=(c="",n="")=>`<div class="ln"><input list="pl" placeholder="Select or type product code" value="${esc(c)}"><input type="number" min="1" placeholder="Qty" value="${n}"><button class="ed" type="button" data-rm="1">✕</button></div>`;
 function getLines(root){const ok=[],bad=[];root.querySelectorAll(".ln").forEach(l=>{const[c,n]=[...l.querySelectorAll("input")].map(x=>x.value.trim());if(!c&&!n)return;const q=Number(n);if(!(q>0)||!S.products.some(p=>p.code===c))bad.push(c||"(blank)");else ok.push({code:c,qty:q})});return{ok,bad}}
 function txnV(t){const f=FLD[t].map(([k,l,ty])=>ty==="sel"?`<select id="f_${k}"><option>Trading</option><option>Other</option></select>`:`<input id="f_${k}" type="${ty||"text"}" placeholder="${l}" value="${ty==="date"?today():""}" ${ty==="date"?"":'style="min-width:150px"'}>`).join("");
@@ -173,7 +180,7 @@ S.dr.filter(d=>!per||(d.date||"").slice(0,7)===per).forEach(d=>d.items.forEach(i
 const ks=Object.keys(agg).sort(),tot=ks.reduce((s,k)=>s+agg[k].q,0);
 h+=`<div class="card pad"><div class="f"><b style="align-self:center">DR total per item</b><select id="per"><option value="">All time</option>${ms.map(m=>`<option${m===per?" selected":""}>${m}</option>`).join("")}</select></div><div class="tb" style="border:0"><table><thead><tr><th>Product code</th><th class="r">Total encoded</th><th class="r">% share</th><th class="r"># DRs</th><th>Clients</th></tr></thead><tbody>${ks.map(k=>{const a=agg[k];return`<tr><td>${esc(k)}</td><td class="r"><b>${a.q}</b></td><td class="r">${tot?Math.round(a.q/tot*100):0}%</td><td class="r">${Object.keys(a.n).length}</td><td>${esc(Object.keys(a.c).join(", "))}</td></tr>`}).join("")||'<tr><td colspan="5" class="mut">No deliveries.</td></tr>'}</tbody><tfoot><tr><td><b>Grand total</b></td><td class="r"><b>${tot}</b></td><td></td><td></td><td></td></tr></tfoot></table></div></div>`}
 return h}
-const impV=()=>`<div class="card pad"><p class="mut" style="margin-top:0">Paste CSV rows: <b>brand, code, unit, opening, low alert</b> (low alert optional). Existing codes are skipped. Each product is placed with its brand.</p><textarea id="csv" placeholder="BELIMO, D640N+SR230P-5, set, 1, 3"></textarea><div class="f" style="margin:10px 0 0"><button class="add" data-imp="1"${user.role==="viewer"?" disabled":""}>Import products</button></div></div>`;
+const impV=()=>`<div class="card pad"><h3 style="margin-top:0">Import products</h3><p class="mut" style="margin-top:0">1. Download the template. 2. Fill it in Excel (columns: <b>Brand, Product Code, UM, Beginning Balance, Low Stock Alert</b>) and save it as CSV. 3. Choose the file below, or paste rows copied from Excel. Existing product codes are skipped, and each new product is placed with its brand.</p><div class="f"><button class="ed" data-tpl="1">⬇ Download template (CSV)</button><input type="file" id="csvf" accept=".csv,.txt,text/csv"></div><textarea id="csv" placeholder="Brand, Product Code, UM, Beginning Balance, Low Stock Alert"></textarea><div class="f" style="margin:10px 0 0"><button class="add" data-imp="1"${user.role==="viewer"?" disabled":""}>Import products</button></div><div id="impr" class="mut" style="margin-top:8px"></div></div>`;
 function apprV(){const l=S.pending.slice().reverse();if(!l.length)return'<div class="card pad mut">No pending changes.</div>';
 return l.map(p=>{let a={},b={};try{a=JSON.parse(p.after||"{}")}catch(e){}try{b=JSON.parse(p.before||"{}")}catch(e){}const st=p.status||"pending";
 return`<div class="card pad"><b>${esc(p.type.toUpperCase())} · ${esc(a.action||"")}</b> <span class="mut">by ${esc(p.by)} · ${esc(st)}${p.decidedBy?" by "+esc(p.decidedBy):""}</span><div>${p.reason?`<i>“${esc(p.reason)}”</i><br>`:""}${esc(a.summary||"")}${b.summary?`<br><span class="mut">Before: ${esc(b.summary)}</span>`:""}</div>${st==="pending"&&isA()?`<div class="f" style="margin:10px 0 0"><button class="add" data-ok="${esc(p.id)}">Approve</button><button class="ed" data-no="${esc(p.id)}">Reject</button></div>`:""}</div>`}).join("")}
@@ -186,9 +193,9 @@ $("cs").innerHTML=online?'<span class="dot"></span>Cloud Synced':'<span class="d
 m.innerHTML=head()+(tab==="stock"?stockV():HD[tab]?txnV(tab):tab==="imp"?impV():tab==="appr"?apprV():tab==="usr"?usrV():tab==="cdb"?cdbV():setV())}
 /* ---------- modals & actions ---------- */
 const openM=h=>{$("mdb").innerHTML=h;$("md").classList.add("on")},closeM=()=>$("md").classList.remove("on");
-function prodM(code){const p=code==null?{brand:"",code:"",unit:"pcs",opening:0,min:10}:S.products.find(x=>x.code===code);if(!p)return;const bs=[...new Set(S.products.map(x=>x.brand))].sort();
-openM(`<h3>${code==null?"Add product":"Edit product"}</h3><label class="mut">Brand (new products are placed with their brand)</label><input id="p_b" list="bl" value="${esc(p.brand)}"><datalist id="bl">${bs.map(b=>`<option>${esc(b)}</option>`).join("")}</datalist><label class="mut">Product code</label><input id="p_c" value="${esc(p.code)}"><label class="mut">Unit</label><input id="p_u" value="${esc(p.unit)}"><label class="mut">Beginning balance</label><input id="p_o" type="number" value="${p.opening}"><label class="mut">Low stock alert</label><input id="p_m" type="number" min="0" value="${p.min===""?10:p.min}">${code!=null&&!isA()?'<label class="mut">Reason for edit (required)</label><input id="p_r">':""}<div class="a"><button class="ed" data-x="1">Cancel</button><button class="add" data-s="${code==null?"":esc(code)}">Save</button></div>`)}
-async function psave(code){const p={brand:v("p_b").toUpperCase(),code:v("p_c"),unit:v("p_u")||"pcs",opening:Number(v("p_o"))||0,min:v("p_m")===""?"":Number(v("p_m"))};
+function prodM(code){const p=code==null?{brand:"",code:"",unit:"pcs",opening:0,min:0}:S.products.find(x=>x.code===code);if(!p)return;const bs=[...new Set(S.products.map(x=>x.brand))].sort();
+openM(`<h3>${code==null?"Add product":"Edit product"}</h3><label class="mut">Brand (new products are placed with their brand)</label><input id="p_b" list="bl" value="${esc(p.brand)}"><datalist id="bl">${bs.map(b=>`<option>${esc(b)}</option>`).join("")}</datalist><label class="mut">Product code</label><input id="p_c" value="${esc(p.code)}"><label class="mut">Unit</label><input id="p_u" value="${esc(p.unit)}"><label class="mut">Beginning balance</label><input id="p_o" type="number" value="${p.opening}"><label class="mut">Low stock alert</label><input id="p_m" type="number" min="0" value="${p.min===""?0:p.min}">${code!=null&&!isA()?'<label class="mut">Reason for edit (required)</label><input id="p_r">':""}<div class="a"><button class="ed" data-x="1">Cancel</button><button class="add" data-s="${code==null?"":esc(code)}">Save</button></div>`)}
+async function psave(code){const p={brand:v("p_b").toUpperCase(),code:v("p_c"),unit:v("p_u")||"pcs",opening:Number(v("p_o"))||0,min:Number(v("p_m"))||0};
 if(!p.brand||!p.code)return alert("Brand and product code are required.");const edit=code!=="";
 if(S.products.some(x=>x.code===p.code&&x.code!==code))return alert("That product code already exists.");
 if(edit&&!isA()&&!v("p_r"))return alert("A reason for the edit is required.");
@@ -196,7 +203,7 @@ const sm=`${p.brand} ${p.code} · ${p.unit} · begin ${p.opening} · alert ${p.m
 try{if(edit){const o=S.products.find(x=>x.code===code);if(isA())await api("upd",{s:"products",r:o._row,c:1,v:row});else await api("add",{s:"pending",rows:[prow("stock",code,"edit",sm,{p},`${o.brand} ${o.code} · ${o.unit} · begin ${o.opening} · alert ${o.min}`,v("p_r"))]})}
 else if(user.role==="viewer")await api("add",{s:"pending",rows:[prow("stock",p.code,"add",sm,{p})]});else await api("add",{s:"products",rows:[row]});
 await load();toast(edit&&!isA()||user.role==="viewer"&&!edit?"Sent for admin approval.":"Saved.")}catch(e){toast(e.message)}}
-async function tsave(t){const h={};FLD[t].forEach(([k])=>h[k]=v("f_"+k));const L=getLines($("lines"));
+async function tsaveOld(t){const h={};FLD[t].forEach(([k])=>h[k]=v("f_"+k));const L=getLines($("lines"));
 if(!h.date)return alert("Enter a date.");if(!L.ok.length||L.bad.length)return alert(L.bad.length?"Choose products from the list. Not found or bad quantity: "+L.bad.join(", "):"Add at least one item.");
 const sm=sumTx({...h,items:L.ok});try{if(user.role==="viewer")await api("add",{s:"pending",rows:[prow(t,"","add",sm,{h,items:L.ok})]});
 else await api("add",{s:t,rows:txRows(t,h,L.ok,"doc_"+Date.now()+"_"+Math.random().toString(36).slice(2,6),user.username)});await load();toast(user.role==="viewer"?"Sent for admin approval.":"Saved.")}catch(e){toast(e.message)}}
@@ -214,11 +221,21 @@ async function decide(id,ok){const p=S.pending.find(x=>x.id===id);let a={};try{a
 try{if(ok){const t=p.type;if(HD[t]){if(a.action==="add")await api("add",{s:t,rows:txRows(t,a.h,a.items,"doc_"+Date.now(),p.by)});else if(a.action==="edit")await api("rep",{s:t,id:p.docId,rows:txRows(t,a.h,a.items,p.docId,a.by||p.by)});else if(a.action==="delete")await api("del",{s:t,id:p.docId})}
 else if(t==="stock"){const pr=a.p,row=[pr.brand,pr.code,pr.unit,pr.opening,pr.min];if(a.action==="add")await api("add",{s:"products",rows:[row]});else{const o=S.products.find(x=>x.code===p.docId);if(o)await api("upd",{s:"products",r:o._row,c:1,v:row})}}}
 await api("upd",{s:"pending",r:p._row,c:9,v:[ok?"approved":"rejected",user.username]});await load()}catch(e){toast(e.message)}}
-async function importCsv(){const rows=[],seen=new Set(S.products.map(p=>p.code));($("csv").value).split("\n").forEach(l=>{const c=l.split(",").map(x=>x.trim());if(c.length<2||!c[1]||c[0].toLowerCase()==="brand"||seen.has(c[1]))return;seen.add(c[1]);rows.push([c[0].toUpperCase(),c[1],c[2]||"pcs",Number(c[3])||0,c[4]===undefined||c[4]===""?"":Number(c[4])])});
-if(!rows.length)return toast("Nothing to import.");try{await api("add",{s:"products",rows});tab="stock";await load();toast(rows.length+" products imported.")}catch(e){toast(e.message)}}
+function parseRows(txt){const out=[];txt.replace(/^\uFEFF/,"").split(/\r?\n/).forEach(l=>{if(!l.trim())return;const d=l.includes("\t")?"\t":(l.includes(";")&&!l.includes(",")?";":",");const c=[];let cur="",q=false;for(const ch of l){if(ch==='"')q=!q;else if(ch===d&&!q){c.push(cur.trim());cur=""}else cur+=ch}c.push(cur.trim());out.push(c)});return out}
+async function importCsv(){const rows=[],seen=new Set(S.products.map(p=>p.code.toUpperCase()));let skip=0;
+parseRows($("csv").value).forEach((c,i)=>{if(i===0&&/^brand$/i.test(c[0]))return;const b=(c[0]||"").toUpperCase(),code=c[1]||"";if(!b||!code||seen.has(code.toUpperCase())){skip++;return}seen.add(code.toUpperCase());rows.push([b,code,c[2]||"pcs",Number(c[3])||0,Number(c[4])||0])});
+const r=$("impr");if(!rows.length){r.textContent="Nothing to import ("+skip+" rows skipped: blank or already in the catalog).";return}
+r.textContent="Importing "+rows.length+" products…";try{const x=await api("add",{s:"products",rows});tab="stock";await load();toast((x.n??rows.length)+" products imported"+(skip?", "+skip+" skipped.":"."))}catch(e){r.textContent=e.message}}
+function dlTpl(){const t="Brand,Product Code,UM,Beginning Balance,Low Stock Alert\r\nBELIMO,D640N+SR230P-5,set,1,0\r\nSAMPLE BRAND,SAMPLE-CODE-001,pcs,10,0\r\n";const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["\uFEFF"+t],{type:"text/csv"}));a.download="RPI-products-import-template.csv";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 async function prof(){try{const r=await api("profile",{name:v("s_n"),username:v("s_u").toLowerCase()});user=r.me;render();toast("Profile updated.")}catch(e){toast(e.message)}}
 async function pwc(){const n=$("s_p").value;if(n.length<8)return toast("New password must be at least 8 characters.");if(n!==$("s_c").value)return toast("Passwords do not match.");
 try{await api("profile",{cur:$("s_o").value,pw:n});["s_o","s_p","s_c"].forEach(i=>$(i).value="");toast("Password updated.")}catch(e){toast(e.message)}}
+async function tsave(t){const h={};FLD[t].forEach(([k])=>h[k]=v("f_"+k));const L=getLines($("lines"));
+if(!h.date)return alert("Enter a date.");if(!L.ok.length||L.bad.length)return alert(L.bad.length?"Choose products from the list. Not found or bad quantity: "+L.bad.join(", "):"Add at least one item.");
+if(user.role==="viewer"){try{await api("add",{s:"pending",rows:[prow(t,"","add",sumTx({...h,items:L.ok}),{h,items:L.ok})]});await load();toast("Sent for admin approval.")}catch(e){toast(e.message)}return}
+const id="doc_"+Date.now()+"_"+Math.random().toString(36).slice(2,6),d={id,by:user.username,ts:String(Date.now()),...h,items:L.ok};
+S[t].push(d);render();toast("Saved.");
+api("add",{s:t,rows:txRows(t,h,L.ok,id,user.username)}).catch(e=>{S[t]=S[t].filter(x=>x!==d);render();toast("Not saved: "+e.message)})}
 /* ---------- events ---------- */
 document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.closest&&e.target.closest(".ac")){const b=document.querySelector(".ac .add");if(b)b.click()}});
 document.addEventListener("click",e=>{if(menu&&!e.target.closest(".menuw")){menu=false;render()}
@@ -239,15 +256,15 @@ else if(d.addln){const c=$(b.closest(".md")?"mlines":"lines");c.insertAdjacentHT
 else if(d.rm){const l=b.closest(".ln");if(l.parentNode.children.length>1)l.remove();else l.querySelectorAll("input").forEach(i=>i.value="")}
 else if(d.etx)etxM(...d.etx.split("|"));else if(d.dtx)dtxM(...d.dtx.split("|"));
 else if(d.esave)esave(...d.esave.split("|"));else if(d.dsave)dsave(...d.dsave.split("|"));
-else if(d.imp)importCsv();else if(d.ok)decide(d.ok,true);else if(d.no)decide(d.no,false);
+else if(d.tpl)dlTpl();else if(d.imp)importCsv();else if(d.ok)decide(d.ok,true);else if(d.no)decide(d.no,false);
 else if(d.prof)prof();else if(d.pw)pwc();
 else if(d.ref)load().catch(x=>toast(x.message));
 else if(b.id==="th"||b.id==="th2"){const r=document.documentElement;r.dataset.theme=r.dataset.theme==="light"?"dark":"light"}});
 document.addEventListener("input",e=>{if(e.target.id==="q"){q=e.target.value;$("rows").innerHTML=rows()}});
-document.addEventListener("change",async e=>{const t=e.target;if(t.id==="br"){br=t.value;$("rows").innerHTML=rows()}else if(t.id==="per"){per=t.value;render()}
+document.addEventListener("change",async e=>{const t=e.target;if(t.id==="csvf"){const f=t.files[0];if(f){const fr=new FileReader();fr.onload=()=>{$("csv").value=fr.result;$("impr").textContent="File loaded. Press Import products."};fr.readAsText(f)}}else if(t.id==="br"){br=t.value;$("rows").innerHTML=rows()}else if(t.id==="per"){per=t.value;render()}
 else if(t.dataset.mn){const o=S.products.find(x=>x.code===t.dataset.mn);if(o)try{await api("upd",{s:"products",r:o._row,c:5,v:[Number(t.value)||0]});await load()}catch(x){toast(x.message)}}
 else if(t.dataset.ur)try{await api("upd",{s:"accounts",r:Number(t.dataset.ur),c:4,v:[t.value]});await load();toast("Role updated.")}catch(x){toast(x.message)}});
-function bgInit(){const b=$("bg");let s=7;const R=()=>(s=(s*9301+49297)%233280)/233280;for(let i=0;i<26;i++){const e=document.createElementNS("http://www.w3.org/2000/svg","svg"),w=130+R()*150;e.setAttribute("viewBox","0 0 300 70");e.setAttribute("class","wm");e.innerHTML='<use href="#lg"/>';
+function bgInit(){const b=$("bg");let s=7;const R=()=>(s=(s*9301+49297)%233280)/233280;for(let i=0;i<34;i++){const e=document.createElementNS("http://www.w3.org/2000/svg","svg"),w=170+R()*200;e.setAttribute("viewBox","0 0 300 70");e.setAttribute("class","wm");e.innerHTML='<use href="#lg"/>';
 e.style.cssText=`left:${(R()*108-8).toFixed(1)}%;top:${(R()*104-4).toFixed(1)}%;width:${w|0}px;height:${(w*70/300)|0}px;--r:${(R()*60-30)|0}deg;--x:${(R()*180-90)|0}px;--y:${(R()*180-90)|0}px;--d:${(30+R()*50)|0}s;--l:-${(R()*40)|0}s`;b.appendChild(e)}}
 setInterval(()=>{if(user&&!document.hidden&&!$("md").classList.contains("on")&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||""))load().catch(()=>{})},30000);
 (async()=>{bgInit();if(okApi()&&tok){try{await load();return}catch(e){tok=null}}render()})();
