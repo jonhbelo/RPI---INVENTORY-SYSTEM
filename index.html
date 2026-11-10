@@ -258,7 +258,7 @@ else if(d.etx)etxM(...d.etx.split("|"));else if(d.dtx)dtxM(...d.dtx.split("|"));
 else if(d.esave)esave(...d.esave.split("|"));else if(d.dsave)dsave(...d.dsave.split("|"));
 else if(d.tpl)dlTpl();else if(d.imp)importCsv();else if(d.ok)decide(d.ok,true);else if(d.no)decide(d.no,false);
 else if(d.prof)prof();else if(d.pw)pwc();
-else if(d.ref)load().catch(x=>toast(x.message));
+else if(d.ref)load(true).then(()=>toast("Refreshed from the database.")).catch(x=>toast(x.message));
 else if(b.id==="th"||b.id==="th2"){const r=document.documentElement;r.dataset.theme=r.dataset.theme==="light"?"dark":"light"}});
 document.addEventListener("input",e=>{if(e.target.id==="q"){q=e.target.value;$("rows").innerHTML=rows()}});
 document.addEventListener("change",async e=>{const t=e.target;if(t.id==="csvf"){const f=t.files[0];if(f){const fr=new FileReader();fr.onload=()=>{$("csv").value=fr.result;$("impr").textContent="File loaded. Press Import products."};fr.readAsText(f)}}else if(t.id==="br"){br=t.value;$("rows").innerHTML=rows()}else if(t.id==="per"){per=t.value;render()}
