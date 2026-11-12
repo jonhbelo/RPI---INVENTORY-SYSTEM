@@ -253,7 +253,7 @@ const setV=()=>`<div class="card pad sf"><h3>Profile</h3><label>Full name</label
 function render(){document.body.classList.toggle("na",!user);const m=$("main"),keep=[...document.querySelectorAll(".tb")].map(e=>e.scrollTop);if(!user){m.innerHTML=authV();return}
 $("nav").innerHTML=NAV.map(n=>{const c=n[0]==="appr"?S.pending.filter(p=>(p.status||"pending")==="pending").length:0;return`<button class="nv${n[0]===tab?" on":""}" data-t="${n[0]}"><svg viewBox="0 0 24 24"><path d="${n[2]}"/></svg>${n[1]}${c?" ("+c+")":""}</button>`}).join("");
 $("cs").innerHTML=online?'<span class="dot"></span>Cloud Synced':'<span class="dot" style="background:var(--neg)"></span>Offline';$("ms").textContent=online?ms+"ms":"";
-m.innerHTML=head()+(tab==="stock"?stockV():tab==="ad"?adV():HD[tab]?txnV(tab):tab==="imp"?impV():tab==="appr"?apprV():tab==="usr"?usrV():tab==="cdb"?cdbV():setV());document.querySelectorAll(".tb").forEach((e,i)=>{if(keep[i])e.scrollTop=keep[i]});if(tab==="set")clearPwSoon()}
+m.innerHTML=head()+(tab==="stock"?stockV():tab==="ad"?adV():HD[tab]?txnV(tab):tab==="imp"?impV():tab==="appr"?apprV():tab==="usr"?usrV():tab==="cdb"?cdbV():setV());document.querySelectorAll(".tb").forEach((e,i)=>{if(keep[i])e.scrollTop=keep[i]});if(tab==="ad")adSync();if(tab==="set")clearPwSoon()}
 /* ---------- modals & actions ---------- */
 const openM=(h,w)=>{$("mdb").className=w?"w":"";$("mdb").innerHTML=h;$("md").classList.add("on")},closeM=()=>$("md").classList.remove("on");
 function prodM(code){const p=code==null?{brand:"",code:"",unit:"pcs",opening:0,min:0}:S.products.find(x=>x.code===code);if(!p)return;const bs=[...new Set(S.products.map(x=>x.brand))].sort();
@@ -287,7 +287,7 @@ async function decide(id,ok){const p=S.pending.find(x=>x.id===id);let a={};try{a
 p.status=ok?"approved":"rejected";p.decidedBy=user.username;render();toast(ok?"Approved.":"Rejected.");
 const t=p.type,only=["pending"].concat(HD[t]?[t]:t==="ad"?["ad","products"]:["products"]);
 bgRun(async()=>{if(ok){if(HD[t]){if(a.action==="add")await api("add",{s:t,rows:txRows(t,a.h,a.items,"doc_"+Date.now(),p.by)});else if(a.action==="edit")await api("rep",{s:t,id:p.docId,rows:txRows(t,a.h,a.items,p.docId,a.by||p.by)});else if(a.action==="delete")await api("del",{s:t,id:p.docId})}
-else if(t==="ad"){if(a.action==="add")await api("asm",{type:a.type,no:a.no,date:a.date,item:a.item,comps:a.items,brand:a.np?a.np.brand:"",unit:a.np?a.np.unit:""});else if(a.action==="delete")await api("del",{s:"ad",id:p.docId})}
+else if(t==="ad"){if(a.action==="add")await api("asm",{type:a.type,no:a.no,date:a.date,item:a.item,comps:a.items,brand:a.np?a.np.brand:"",unit:a.np?a.np.unit:"",mode:a.np?"new":"existing"});else if(a.action==="delete")await api("del",{s:"ad",id:p.docId})}
 else if(t==="stock"){const pr=a.p,row=[pr.brand,pr.code,pr.unit,pr.opening,pr.min];if(a.action==="add")await api("add",{s:"products",rows:[row]});else await api("updp",{code:p.docId,c:1,v:row})}}
 await api("upd",{s:"pending",r:p._row,c:9,v:[ok?"approved":"rejected",user.username]})},only)}
 function parseRows(txt){const out=[];txt.replace(/^\uFEFF/,"").split(/\r?\n/).forEach(l=>{if(!l.trim())return;const d=l.includes("\t")?"\t":(l.includes(";")&&!l.includes(",")?";":",");const c=[];let cur="",q=false;for(const ch of l){if(ch==='"')q=!q;else if(ch===d&&!q){c.push(cur.trim());cur=""}else cur+=ch}c.push(cur.trim());out.push(c)});return out}
@@ -325,27 +325,34 @@ S[t].push(d);render();toast("Saved.");
 api("add",{s:t,rows:txRows(t,h,L.ok,id,user.username)}).catch(e=>{S[t]=S[t].filter(x=>x!==d);render();toast("Not saved: "+e.message)})}
 function adV(){const bs=[...new Set(S.products.map(p=>p.brand))].sort();
 const list=S.ad.slice().sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(Number(b.ts)||0)-(Number(a.ts)||0)).map(d=>`<tr><td>${esc(d.no)}</td><td>${esc(d.date)}</td><td><span class="pill ${d.type==="Assembled"?"p-in":"p-low"}">${d.type}</span></td><td>${esc(d.item.code)} × ${d.item.qty}</td><td>${d.items.map(i=>esc(i.code)+" × "+i.qty).join(", ")}</td><td class="c">${esc(d.by)}</td><td class="r"><button class="ed" data-dad="${esc(d.id)}">🗑 Delete</button></td></tr>`).join("");
-return`<div class="card pad"><div class="f"><select id="ad_t"><option>Assembled</option><option>Disassembled</option></select><input id="ad_no" placeholder="Client name / other reason" style="min-width:300px"><input id="ad_d" type="date" value="${today()}"></div>
-<label class="mut" style="font-size:12px" id="ad_l1">Assembled item (a new item is added to the catalog)</label>
-<div class="f" style="margin-top:6px"><input id="ad_c" list="pl" placeholder="Item code" style="min-width:220px"><input id="ad_q" type="number" min="1" placeholder="Qty" style="width:100px"><input id="ad_b" list="bl2" placeholder="Brand (new item only)"><datalist id="bl2">${bs.map(b=>`<option>${esc(b)}</option>`).join("")}</datalist><input id="ad_u" placeholder="Unit (new item only)" value="pcs" style="width:130px"></div>
+return`<div class="card pad"><div class="f"><select id="ad_t"><option>Assembled</option><option>Disassembled</option></select><select id="ad_m"><option>Existing Product</option><option>New Product</option></select><input id="ad_no" placeholder="Client name / other reason" style="min-width:300px"><input id="ad_d" type="date" value="${today()}"></div>
+<label class="mut" style="font-size:12px" id="ad_l1">Existing product (its stock increases)</label>
+<div class="f" style="margin-top:6px"><input id="ad_c" list="pl" placeholder="Select existing product code" style="min-width:240px"><input id="ad_q" type="number" min="1" placeholder="Qty" style="width:100px"><span id="ad_new" class="f" style="display:none;margin:0"><input id="ad_b" list="bl2" placeholder="Brand"><input id="ad_u" placeholder="Unit" value="pcs" style="width:110px"></span><datalist id="bl2">${bs.map(b=>`<option>${esc(b)}</option>`).join("")}</datalist></div>
 <label class="mut" style="font-size:12px">Components used</label><div id="lines" style="margin-top:6px">${lineH()}</div>
 <div class="f" style="margin:6px 0 0"><button class="ed" data-addln="1">＋ Add component</button><button class="add" data-adsave="1">${user.role==="viewer"?"Submit for approval":"Save"}</button></div>
 <p class="mut" style="margin:10px 0 0;font-size:13px">Assembled: adds the item to stock and deducts its components. Disassembled: deducts the item and returns its components to stock.</p></div>
 <div class="card tb"><table><thead><tr><th>Client / Reason</th><th>Date</th><th>Type</th><th>Item</th><th>Components</th><th>By</th><th class="r">Action</th></tr></thead><tbody>${list||'<tr><td colspan="7" class="mut">No records yet.</td></tr>'}</tbody></table></div>`}
 const adSum=d=>`${d.no} ${d.date}: ${d.type} ${d.item.code} × ${d.item.qty} | ${d.items.map(i=>i.code+" × "+i.qty).join(", ")}`;
-async function adsave(){const type=v("ad_t"),no=v("ad_no"),date=v("ad_d"),code=v("ad_c"),qty=Number(v("ad_q")),L=getLines($("lines"));
-if(!no||!date)return alert("Enter the client name or other reason, and the date.");if(!code||!(qty>0))return alert("Enter the item code and a quantity above 0.");
+async function adsave(){const type=v("ad_t"),isNew=type==="Assembled"&&v("ad_m")==="New Product",no=v("ad_no"),date=v("ad_d"),code=v("ad_c"),qty=Number(v("ad_q")),L=getLines($("lines"));
+if(!no||!date)return alert("Enter the client name or other reason, and the date.");
+if(!code)return alert(isNew?"Enter the new product code.":"Select the product code from the list.");
+if(!(qty>0))return alert("Enter a quantity above 0.");
 if(!L.ok.length||L.bad.length)return alert(L.bad.length?"Choose components from the list. Not found or bad quantity: "+L.bad.join(", "):"Add at least one component.");
 if(L.ok.some(i=>i.code.toUpperCase()===code.toUpperCase()))return alert("The item cannot be its own component.");
 const ex=S.products.find(p=>p.code.toUpperCase()===code.toUpperCase());let brand="",unit="";
-if(!ex){if(type==="Disassembled")return alert("The item being disassembled must already be in Stocks.");brand=v("ad_b").toUpperCase();unit=v("ad_u")||"pcs";if(!brand)return alert("Enter a brand for the new item.")}
+if(isNew){if(ex)return alert("That product code already exists. Switch to Existing Product to use it.");brand=v("ad_b").toUpperCase();unit=v("ad_u")||"pcs";if(!brand)return alert("Enter a brand for the new product.")}
+else if(!ex)return alert(type==="Assembled"?"Product not found. Choose it from the list, or switch to New Product to create it.":"The item being disassembled must already be in Stocks.");
 const ic=ex?ex.code:code,need=type==="Assembled"?L.ok.map(i=>[i.code,i.qty]):[[ic,qty]];
 const short=need.map(([c,n])=>{const p=S.products.find(x=>x.code===c);return p&&calc(p).e<n?c+" (have "+calc(p).e+", need "+n+")":null}).filter(Boolean);
 if(short.length&&!confirm("Not enough stock for: "+short.join(", ")+". Save anyway?"))return;
-const item={code:ic,qty},sm=adSum({no,date,type,item,items:L.ok});
-if(user.role==="viewer"){toast("Sent for admin approval.");bgRun(()=>api("add",{s:"pending",rows:[prow("ad","","add",sm,{type,no,date,item,items:L.ok,np:ex?null:{brand,unit}})]}),["pending"]);return}
-S.ad.push({id:"ad_tmp_"+Date.now(),no,date,type,by:user.username,ts:String(Date.now()),item,items:L.ok});if(!ex)addLocalProduct({brand,code:ic,unit,opening:0,min:0});render();toast("Saved.");
-bgRun(()=>api("asm",{type,no,date,item,comps:L.ok,brand,unit}),["ad","products"])}
+const item={code:ic,qty},sm=adSum({no,date,type,item,items:L.ok}),mode=isNew?"new":"existing";
+if(user.role==="viewer"){toast("Sent for admin approval.");bgRun(()=>api("add",{s:"pending",rows:[prow("ad","","add",sm,{type,no,date,item,items:L.ok,np:isNew?{brand,unit}:null})]}),["pending"]);return}
+S.ad.push({id:"ad_tmp_"+Date.now(),no,date,type,by:user.username,ts:String(Date.now()),item,items:L.ok});if(isNew)addLocalProduct({brand,code:ic,unit,opening:0,min:0});render();toast(isNew?"Saved. "+ic+" was added to Stocks.":"Saved.");
+bgRun(()=>api("asm",{type,no,date,item,comps:L.ok,brand,unit,mode}),["ad","products"])}
+function adSync(){const t=$("ad_t"),m=$("ad_m");if(!t||!m)return;const asm=t.value==="Assembled",nw=asm&&m.value==="New Product",c=$("ad_c");
+m.style.display=asm?"":"none";$("ad_new").style.display=nw?"flex":"none";if(nw)c.removeAttribute("list");else c.setAttribute("list","pl");
+c.placeholder=nw?"New product code":asm?"Select existing product code":"Select item to disassemble";
+$("ad_l1").textContent=nw?"New product (created and added to Stocks automatically)":asm?"Existing product (its stock increases)":"Item being disassembled (its stock decreases)"}
 function dadM(id){const d=S.ad.find(x=>x.id===id);if(!d)return;openM(`<h3>Delete ${d.type} record</h3><p>${esc(adSum(d))}</p><label class="mut">Reason for deletion (required)</label><input id="m_reason" style="width:100%"><div class="a"><button class="ed" data-x="1">Cancel</button><button class="add" style="background:var(--neg)" data-dadsave="${esc(id)}">${isA()?"Delete":"Request deletion"}</button></div>`)}
 async function dadsave(id){const d=S.ad.find(x=>x.id===id),r=v("m_reason");if(!r)return alert("A reason for deletion is required.");closeM();const sm=adSum(d);
 if(isA()){S.ad=S.ad.filter(x=>x!==d);render();toast("Deleted.");bgRun(async()=>{await api("del",{s:"ad",id});await api("add",{s:"pending",rows:[prow("ad",id,"delete",sm,{},"",r,"approved",user.username)]})},["pending"])}
@@ -380,11 +387,11 @@ else if(d.prof)prof();else if(d.pw)pwc();
 else if(d.ref)load(true).then(()=>toast("Refreshed from the database.")).catch(x=>toast(x.message));
 else if(b.id==="th"||b.id==="th2"){const r=document.documentElement;r.dataset.theme=r.dataset.theme==="light"?"dark":"light"}});
 document.addEventListener("input",e=>{if(e.target.id==="q"){q=e.target.value;$("rows").innerHTML=rows();e.target.parentNode.classList.toggle("has",!!q)}});
-document.addEventListener("change",async e=>{const t=e.target;if(t.id==="csvf"){const f=t.files[0];if(f){const fr=new FileReader();fr.onload=()=>{$("csv").value=fr.result;$("impr").textContent="File loaded. Press Import products."};fr.readAsText(f)}}else if(t.id==="br"){br=t.value;$("rows").innerHTML=rows()}else if(t.id==="ad_t"){$("ad_l1").textContent=t.value==="Assembled"?"Assembled item (a new item is added to the catalog)":"Item being disassembled"}else if(t.id==="per"){per=t.value;render()}
+document.addEventListener("change",async e=>{const t=e.target;if(t.id==="csvf"){const f=t.files[0];if(f){const fr=new FileReader();fr.onload=()=>{$("csv").value=fr.result;$("impr").textContent="File loaded. Press Import products."};fr.readAsText(f)}}else if(t.id==="br"){br=t.value;$("rows").innerHTML=rows()}else if(t.id==="ad_t"||t.id==="ad_m"){adSync()}else if(t.id==="per"){per=t.value;render()}
 else if(t.dataset.mn){const o=S.products.find(x=>x.code===t.dataset.mn);if(o){o.min=Number(t.value)||0;refreshRows();bgRun(()=>api("updp",{code:o.code,c:5,v:[o.min]}))}}
 else if(t.dataset.ur){const ac=S.accounts.find(x=>String(x._row)===t.dataset.ur);if(ac)ac.role=t.value;toast("Role updated.");bgRun(()=>api("upd",{s:"accounts",r:Number(t.dataset.ur),c:4,v:[t.value]}),["accounts"])}});
 function bgInit(){const b=$("bg");let s=7;const R=()=>(s=(s*9301+49297)%233280)/233280;for(let i=0;i<34;i++){const e=document.createElementNS("http://www.w3.org/2000/svg","svg"),w=170+R()*200;e.setAttribute("viewBox","0 0 300 36.0");e.setAttribute("class","wm");e.innerHTML='<use href="#lg"/>';
 e.style.cssText=`left:${(R()*108-8).toFixed(1)}%;top:${(R()*104-4).toFixed(1)}%;width:${w|0}px;height:${(w*36.0/300)|0}px;--r:${(R()*60-30)|0}deg;--x:${(R()*180-90)|0}px;--y:${(R()*180-90)|0}px;--d:${(30+R()*50)|0}s;--l:-${(R()*40)|0}s`;b.appendChild(e)}}
-setInterval(()=>{if(user&&!document.hidden&&!$("md").classList.contains("on")&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||""))load().catch(()=>{})},30000);
+setInterval(()=>{if(user&&!document.hidden&&!$("md").classList.contains("on")&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||"")&&![...document.querySelectorAll("#main input:not([type=date]):not([type=file]):not(#q), #main textarea")].some(e=>e.value.trim()))load().catch(()=>{})},30000);
 (async()=>{bgInit();if(okApi()&&tok){try{await load();return}catch(e){tok=null}}render()})();
 </script></body></html>
